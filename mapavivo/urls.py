@@ -12,4 +12,5 @@ urlpatterns = [
     path('solicitar-cuenta/',   TemplateView.as_view(template_name='solicitar-cuenta.html'), name='solicitar-cuenta'),
     path('admin-panel/',        TemplateView.as_view(template_name='admin-panel.html'),      name='admin-panel'),
     path('mi-perfil/',          TemplateView.as_view(template_name='mi-perfil.html'),        name='mi-perfil'),
+    path('pqr/', TemplateView.as_view(template_name='pqr.html'), name='pqr'),
 ]

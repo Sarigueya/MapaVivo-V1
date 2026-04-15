@@ -180,3 +180,27 @@ class Recurso(models.Model):
     def renovar(self, horas=8):
         """Mantener compatibilidad — con horario no es necesario pero no rompe nada."""
         pass
+
+# Modelo para PQRs (Peticiones, Quejas y Reclamos)
+class PQR(models.Model):
+    TIPO_CHOICES = [
+        ('peticion', 'Petición'),
+        ('queja',    'Queja'),
+        ('reclamo',  'Reclamo'),
+    ]
+    ESTADO_CHOICES = [
+        ('nuevo',      'Nuevo'),
+        ('en_revision','En revisión'),
+        ('resuelto',   'Resuelto'),
+    ]
+    nombre     = models.CharField(max_length=200)
+    email      = models.CharField(max_length=200)
+    tipo       = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    mensaje    = models.TextField()
+    estado     = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='nuevo')
+    recurso    = models.ForeignKey(Recurso, on_delete=models.SET_NULL, null=True, blank=True)
+    creado_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+        verbose_name = 'PQR'

@@ -23,4 +23,9 @@ urlpatterns = [
 
     # Utilidades
     path('health/',                         views.HealthCheck.as_view()),
+
+    # PQRs
+    path('pqr/',              views.PQRCreateView.as_view()),
+    path('admin/pqr/',        views.AdminPQRView.as_view()),
+    path('admin/pqr/<int:pk>/', views.AdminPQRView.as_view()),
 ]

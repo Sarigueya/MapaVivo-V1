@@ -321,6 +321,10 @@ tr:hover td { background: var(--bg); }
       Recursos activos
       <span class="nav-badge verde" id="badge-recursos">0</span>
     </a>
+    <a class="nav-item" onclick="mostrarSeccion('pqr')">
+      PQR
+      <span class="nav-badge" id="badge-pqr">0</span>
+    </a>
     <div class="nav-seccion">Mi cuenta</div>
     <a class="nav-item" href="/mi-perfil/">Mi perfil</a>
     <a class="nav-item" href="/">Ver mapa</a>
@@ -381,6 +385,29 @@ tr:hover td { background: var(--bg); }
         </table>
       </div>
     </div>
+
+    <!-- Sección PQR -->
+  <div id="seccion-pqr" style="display:none">
+    <div class="seccion-titulo">Peticiones, Quejas y Reclamos</div>
+
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Tipo</th>
+            <th>Mensaje</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-pqr">
+          <tr><td colspan="6" class="vacio">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   </main>
 </div>
@@ -446,7 +473,7 @@ async function verificarAdmin() {
 }
 
 async function cargarDatos() {
-  await Promise.all([cargarOrganizaciones(), cargarRecursos()]);
+  await Promise.all([cargarOrganizaciones(), cargarRecursos(),  cargarPQR()]);
 }
 
 // ── ORGANIZACIONES ────────────────────────────────────────
@@ -634,6 +661,8 @@ async function cerrarSesion() {
 function mostrarSeccion(nombre) {
   document.getElementById('seccion-organizaciones').style.display = nombre === 'organizaciones' ? '' : 'none';
   document.getElementById('seccion-recursos').style.display       = nombre === 'recursos' ? '' : 'none';
+  document.getElementById('seccion-pqr').style.display            = nombre === 'pqr' ? '' : 'none';
+
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('activo'));
   event.currentTarget.classList.add('activo');
 }
@@ -657,6 +686,74 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('visible');
   setTimeout(() => t.classList.remove('visible'), 2800);
+}
+async function cargarPQR() {
+  try {
+    const res = await fetch(API + '/admin/pqr/', { credentials: 'include' });
+    const data = await res.json();
+
+    document.getElementById('badge-pqr').textContent = data.length;
+
+    const tbody = document.getElementById('tabla-pqr');
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="vacio">No hay PQR registradas.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(p => `
+      <tr>
+        <td>
+          <strong>${p.nombre}</strong><br>
+          <span style="font-size:11px;color:var(--texto3)">${p.email}</span>
+        </td>
+        <td>${p.tipo}</td>
+        <td style="max-width:200px">${p.mensaje}</td>
+        <td>
+          <span class="chip-estado chip-${p.estado === 'nuevo' ? 'pendiente' : p.estado === 'resuelto' ? 'aprobada' : 'pendiente'}">
+            ${p.estado}
+          </span>
+        </td>
+        <td style="font-size:11px;color:var(--texto3)">
+          ${formatearFecha(p.creado_en)}
+        </td>
+        <td>
+          <div class="acciones">
+            <button class="btn-accion aprobar" onclick="cambiarEstadoPQR(${p.id}, 'resuelto')">Resolver</button>
+            <button class="btn-accion reset" onclick="cambiarEstadoPQR(${p.id}, 'en_revision')">Revisar</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+  } catch {
+    toast('Error al cargar PQR');
+  }
+}
+async function cambiarEstadoPQR(id, estado) {
+  const csrf = getCsrf();
+
+  try {
+    const res = await fetch(API + '/admin/pqr/' + id + '/', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf
+      },
+      credentials: 'include',
+      body: JSON.stringify({ estado })
+    });
+
+    if (res.ok) {
+      toast('Estado actualizado');
+      cargarPQR();
+    } else {
+      toast('Error al actualizar');
+    }
+
+  } catch {
+    toast('Error de conexión');
+  }
 }
 </script>
 </body>

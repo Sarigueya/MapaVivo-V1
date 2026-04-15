@@ -284,3 +284,45 @@ class HealthCheck(APIView):
             'timestamp': timezone.now(),
             'autenticado': request.user.is_authenticated,
         })
+
+# Vistas para PQRs (Peticiones, Quejas y Reclamos)
+class PQRCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        datos = request.data
+        if not datos.get('nombre') or not datos.get('email') or not datos.get('mensaje'):
+            return Response({'error': 'Nombre, email y mensaje son obligatorios.'}, status=400)
+        pqr = PQR.objects.create(
+            nombre  = datos['nombre'],
+            email   = datos['email'],
+            tipo    = datos.get('tipo', 'peticion'),
+            mensaje = datos['mensaje'],
+            recurso_id = datos.get('recurso_id'),
+        )
+        return Response({'mensaje': 'PQR enviada correctamente.', 'id': pqr.id}, status=201)
+
+
+class AdminPQRView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Sin permiso.'}, status=403)
+        pqrs = PQR.objects.select_related('recurso').all()
+        data = [{
+            'id': p.id, 'nombre': p.nombre, 'email': p.email,
+            'tipo': p.tipo, 'mensaje': p.mensaje, 'estado': p.estado,
+            'recurso': p.recurso.nombre if p.recurso else None,
+            'creado_en': p.creado_en.isoformat(),
+        } for p in pqrs]
+        return Response(data)
+
+    def patch(self, request, pk):
+        if not request.user.is_superuser:
+            return Response({'error': 'Sin permiso.'}, status=403)
+        pqr = get_object_or_404(PQR, pk=pk)
+        if 'estado' in request.data:
+            pqr.estado = request.data['estado']
+            pqr.save()
+        return Response({'mensaje': 'Estado actualizado.'})

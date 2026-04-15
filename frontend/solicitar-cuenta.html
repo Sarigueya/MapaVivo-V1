@@ -369,19 +369,53 @@ select {
         </div>
 
         <!-- Cambio para alert abbeas data -->
-        <div style="background:var(--verde-bg);border:1px solid var(--verde-borde);border-radius:8px;padding:14px 16px;">
-          <label style="display:flex;gap:10px;cursor:pointer;font-size:13px;color:var(--texto2);line-height:1.6">
-            <input type="checkbox" id="acepto-habeas" style="width:auto;margin-top:3px;accent-color:var(--verde)">
-            <span>
-              Autorizo el tratamiento de mis datos personales conforme a la
-              <strong>Ley 1581 de 2012</strong> (Habeas Data) y el
-              <strong>Decreto 1377 de 2013</strong> de Colombia. Los datos serán
-              usados únicamente para la gestión de la cuenta en Mapa Vivo y no
-              serán compartidos con terceros. Puedo revocar esta autorización
-              escribiendo a <em>contacto@mapavivo.org</em>.
-            </span>
-          </label>
-        </div>
+       <div style="background:var(--verde-bg);border:1px solid var(--verde-borde);border-radius:8px;padding:14px 16px;">
+  
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:13px;color:var(--texto2);line-height:1.6">
+          
+          <input type="checkbox" id="acepto-habeas" style="display:none;">
+          
+          <span style="
+            width:18px;
+            height:18px;
+            border:2px solid var(--verde);
+            border-radius:4px;
+            display:inline-block;
+            position:relative;
+            flex-shrink:0;
+          " id="custom-check"></span>
+
+          <span>
+            Autorizo el tratamiento de mis datos personales conforme a la
+            <strong>Ley 1581 de 2012</strong> (Habeas Data) y el
+            <strong>Decreto 1377 de 2013</strong> de Colombia. Los datos serán
+            usados únicamente para la gestión de la cuenta en Mapa Vivo y no
+            serán compartidos con terceros. Puedo revocar esta autorización
+            escribiendo a <em>contacto@mapavivo.org</em>.
+          </span>
+
+        </label>
+      </div>
+
+    <script>
+      const checkbox = document.getElementById("acepto-habeas");
+      const custom = document.getElementById("custom-check");
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          custom.style.background = "var(--verde)";
+          custom.innerHTML = "✔";
+          custom.style.color = "white";
+          custom.style.fontSize = "12px";
+          custom.style.display = "flex";
+          custom.style.alignItems = "center";
+          custom.style.justifyContent = "center";
+        } else {
+          custom.style.background = "transparent";
+          custom.innerHTML = "";
+        }
+      });
+    </script>
 
         <button class="btn-principal" id="btn-enviar" onclick="enviarSolicitud()">
           Enviar solicitud
