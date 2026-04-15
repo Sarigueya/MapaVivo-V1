@@ -216,6 +216,14 @@ class RecursoListCreate(APIView):
         return Response(ser.errors, status=400)
 
 
+# Vista para que un usuario vea solo sus recursos (sin importar el estado) --> por probar
+class MisRecursosView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        recursos = Recurso.objects.filter(creado_por=request.user)
+        return Response(RecursoSerializer(recursos, many=True).data)
+
 class RecursoDetail(APIView):
     permission_classes = [IsAuthenticated]
 

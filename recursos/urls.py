@@ -19,6 +19,7 @@ urlpatterns = [
     path('recursos/',                       views.RecursoListCreate.as_view()),
     path('recursos/<int:pk>/',              views.RecursoDetail.as_view()),
     path('recursos/<int:pk>/sin-stock/',    views.RecursoSinStockView.as_view()),
+    path('recursos/mios/', views.MisRecursosView.as_view()), # Nueva ruta para ver solo los recursos del usuario autenticado
 
     # Utilidades
     path('health/',                         views.HealthCheck.as_view()),
