@@ -140,12 +140,11 @@ class RecursoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Longitud debe estar entre -180 y 180')
         return value
 
-
 class RecursoUpdateSerializer(serializers.ModelSerializer):
     """Para actualizar descripción, horario o activar sin_stock."""
     class Meta:
-        model  = Recurso
+        model = Recurso
         fields = [
-            'descripcion', 'requisitos', 'direccion',
+            'nombre', 'descripcion', 'requisitos', 'direccion',  
             'dias_atencion', 'hora_apertura', 'hora_cierre', 'sin_horario',
         ]
