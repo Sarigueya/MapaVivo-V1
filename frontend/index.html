@@ -126,7 +126,10 @@
             <option value="canasta">Entrega de canastas</option>
           </select>
         </div>
-      
+        <div>
+          <label class="campo-etiqueta" for="f-req">Requisitos <span class="campo-pista">opcional</span></label>
+          <input id="f-req" type="text" placeholder="Ej: traer DNI, sin requisitos...">
+        </div>
       </div>
 
       <div>
@@ -134,27 +137,76 @@
           Descripción
           <span class="campo-pista">¿Qué ofrecen? ¿En qué horario?</span>
         </label>
-        <textarea id="f-desc" placeholder="Ej: Almuerzo gratuito de lunes a viernes de 12 a 14 hs. Capacidad para 60 personas."></textarea>
+        <textarea id="f-desc" placeholder="Ej: Almuerzo gratuito de lunes a viernes de 12 a 14 hs. Hasta 60 personas."></textarea>
       </div>
 
+      <!-- DIRECCIÓN CON GEOCODIFICACIÓN -->
       <div style="position:relative">
-        <label class="campo-etiqueta" for="f-dir">Dirección <span class="campo-pista">El marcador se ubica automáticamente</span></label>
+        <label class="campo-etiqueta" for="f-dir">
+          Buscar dirección
+          <span class="campo-pista">Escribí y seleccioná de la lista</span>
+        </label>
         <input id="f-dir" type="text" placeholder="Ej: Calle 7 # 4-23, Neiva" autocomplete="off" oninput="buscarDireccion(this.value)">
-        <div id="f-sugerencias" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:1.5px solid var(--verde);border-top:none;border-radius:0 0 8px 8px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:var(--sombra-md)"></div>
+        <div id="f-sugerencias" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:2px solid var(--azul);border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:var(--sombra-md)"></div>
       </div>
 
-      <div id="f-ubicacion-ok" style="display:none;background:var(--verde-bg);border:1px solid var(--verde-borde);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--verde)">
-        Ubicación seleccionada correctamente en el mapa
+      <!-- DIRECCIÓN EXACTA -->
+      <div>
+        <label class="campo-etiqueta" for="f-dir-exacta">
+          Dirección exacta
+          <span class="campo-pista">Complementá con número, piso, referencia</span>
+        </label>
+        <input id="f-dir-exacta" type="text" placeholder="Ej: Calle 7 # 4-23, Barrio Centro, frente al parque">
+      </div>
+
+      <div id="f-ubicacion-ok" style="display:none;background:var(--azul-bg);border:2px solid var(--azul-borde);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--azul)">
+        Ubicación seleccionada en el mapa correctamente
       </div>
       <input id="f-lat" type="hidden">
       <input id="f-lng" type="hidden">
 
+      <!-- DÍAS DE ATENCIÓN -->
       <div>
-        <label class="campo-etiqueta" for="f-req">
-          Requisitos
-          <span class="campo-pista">opcional</span>
+        <label class="campo-etiqueta">Días de atención</label>
+        <div id="f-dias" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s" id="dia-lun-label">
+            <input type="checkbox" name="dia" value="lun" checked style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Lun</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="mar" checked style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Mar</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="mie" checked style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Mié</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="jue" checked style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Jue</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="vie" checked style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Vie</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="sab" style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Sáb</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:5px 10px;border:2px solid var(--borde);border-radius:99px;transition:all .15s">
+            <input type="checkbox" name="dia" value="dom" style="width:auto;accent-color:var(--azul)" onchange="estiloDia(this)"> Dom</label>
+        </div>
+      </div>
+
+      <!-- HORARIO -->
+      <div id="bloque-horario">
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta" for="f-apertura">Hora de apertura</label>
+            <input id="f-apertura" type="time">
+          </div>
+          <div>
+            <label class="campo-etiqueta" for="f-cierre">Hora de cierre</label>
+            <input id="f-cierre" type="time">
+          </div>
+        </div>
+      </div>
+
+      <!-- SIN HORARIO FIJO -->
+      <div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--texto2);cursor:pointer;padding:10px 14px;border:2px solid var(--borde);border-radius:10px;background:var(--bg)">
+          <input type="checkbox" id="f-sin-horario" style="width:auto;accent-color:var(--azul)" onchange="toggleHorario(this.checked)">
+          Sin horario fijo — disponibilidad variable
         </label>
-        <input id="f-req" type="text" placeholder="Ej: Traer recipiente. Sin requisitos. Solo familias con niños.">
+        <p style="font-size:11px;font-weight:600;color:var(--texto3);margin-top:4px;padding-left:4px">Marcá esto si el servicio no tiene días u horas definidos</p>
       </div>
 
     </div>
@@ -386,7 +438,7 @@ async function enviarRecurso() {
     nombre:       nombre,
     tipo:         tipo,
     descripcion:  document.getElementById('f-desc').value.trim(),
-    direccion:    document.getElementById('f-dir').value.trim(),
+    direccion:    (document.getElementById('f-dir-exacta').value.trim() || document.getElementById('f-dir').value.trim()),
     lat:          lat,
     lng:          lng,
     requisitos:   document.getElementById('f-req').value.trim(),
@@ -431,7 +483,7 @@ async function enviarRecurso() {
 }
 
 function limpiarFormulario() {
-  ['f-nombre', 'f-desc', 'f-dir', 'f-req', 'f-lat', 'f-lng', 'f-apertura', 'f-cierre'].forEach(function(id) {
+  ['f-nombre', 'f-desc', 'f-dir', 'f-dir-exacta', 'f-req', 'f-lat', 'f-lng', 'f-apertura', 'f-cierre'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -646,6 +698,19 @@ function chipEstado(estado) {
   };
   var info = map[estado] || ['?', 'estado-closed'];
   return '<span class="estado-chip ' + info[1] + '">' + info[0] + '</span>';
+}
+
+function estiloDia(cb) {
+  var label = cb.parentElement;
+  if (cb.checked) {
+    label.style.background    = 'var(--azul-bg)';
+    label.style.borderColor   = 'var(--azul)';
+    label.style.color         = 'var(--azul)';
+  } else {
+    label.style.background    = 'transparent';
+    label.style.borderColor   = 'var(--borde)';
+    label.style.color         = 'var(--texto2)';
+  }
 }
 
 </script>
