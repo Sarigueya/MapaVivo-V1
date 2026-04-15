@@ -78,7 +78,7 @@ STATICFILES_DIRS = [BASE_DIR / 'frontend' / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'es-ar'
-TIME_ZONE     = 'America/Argentina/Buenos_Aires'
+TIME_ZONE = 'America/Bogota'
 USE_I18N      = True
 USE_TZ        = True
 

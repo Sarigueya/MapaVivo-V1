@@ -31,6 +31,35 @@
 .m-soon   .marcador-cuerpo { background: #e07b39; }
 .m-closed .marcador-onda  { border-color: #c94040; animation: none; opacity: .35; }
 .m-closed .marcador-cuerpo { background: #c94040; opacity: .75; }
+
+/* ── Estilos para botones de editar / eliminar en popup y tarjeta ── */
+.btn-editar-recurso {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 8px; padding: 6px 12px;
+  font-size: 12px; font-weight: 700; font-family: var(--fuente, 'Nunito', sans-serif);
+  color: #2563eb; background: #eff6ff;
+  border: 1.5px solid #bfdbfe; border-radius: 99px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-editar-recurso:hover { background: #dbeafe; border-color: #93c5fd; }
+
+.btn-eliminar-recurso {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 8px; margin-left: 6px; padding: 6px 12px;
+  font-size: 12px; font-weight: 700; font-family: var(--fuente, 'Nunito', sans-serif);
+  color: #dc2626; background: #fef2f2;
+  border: 1.5px solid #fecaca; border-radius: 99px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-eliminar-recurso:hover { background: #fee2e2; border-color: #fca5a5; }
+
+/* Badge "modo edición" en el modal */
+.modal-badge-edicion {
+  display: inline-block; margin-bottom: 8px;
+  padding: 4px 12px; font-size: 11px; font-weight: 800;
+  background: #fef9c3; color: #92400e;
+  border: 1.5px solid #fde68a; border-radius: 99px;
+}
 </style>
 </head>
 <body>
@@ -97,13 +126,17 @@
 <!-- FAB móvil -->
 <button id="fab" onclick="abrirModal()">+</button>
 
-<!-- MODAL -->
+<!-- MODAL (crear / editar recurso) -->
 <div id="fondo-modal" onclick="clicFondo(event)">
   <div id="modal">
     <div class="modal-cabecera">
       <div>
-        <h2>Registrar recurso</h2>
-        <p>Ayudá a que más personas encuentren apoyo cerca</p>
+        <!-- Badge solo visible en modo edición -->
+        <div id="modal-badge-edicion" class="modal-badge-edicion" style="display:none">
+          ✏️ Editando publicación
+        </div>
+        <h2 id="modal-titulo">Registrar recurso</h2>
+        <p id="modal-subtitulo">Ayudá a que más personas encuentren apoyo cerca</p>
       </div>
       <button class="btn-cerrar-modal" onclick="cerrarModal()">✕</button>
     </div>
@@ -164,6 +197,8 @@
       </div>
       <input id="f-lat" type="hidden">
       <input id="f-lng" type="hidden">
+      <!-- ID oculto para saber si estamos editando -->
+      <input id="f-id-edicion" type="hidden" value="">
 
       <!-- DÍAS DE ATENCIÓN -->
       <div>
@@ -215,7 +250,7 @@
       <button class="btn-publicar" id="btn-publicar" onclick="enviarRecurso()">
         Publicar recurso
       </button>
-      <p class="nota-modal">
+      <p class="nota-modal" id="modal-nota">
         La información se actualiza sola. Si nadie confirma la disponibilidad,<br>
         el recurso se retira del mapa en 8 horas.
       </p>
@@ -269,7 +304,6 @@ async function cargarRecursos() {
     const respuesta = await fetch(API + '/recursos/' + params);
     if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
     const data = await respuesta.json();
-    // La API puede devolver array doble — tomar solo el primero si es así
     recursos = Array.isArray(data) ? data : [];
     renderizarLista();
     renderizarMarcadores();
@@ -293,6 +327,16 @@ function configurarFiltros() {
   });
 }
 
+// ── VERIFICAR SI EL USUARIO PUEDE EDITAR UN RECURSO ────────
+function puedeEditar(recurso) {
+  if (!usuarioActual) return false;
+  if (usuarioActual.is_superuser) return true;
+  // La API devuelve creado_por_id (número) que comparamos con el id del usuario actual
+  return recurso.creado_por_id !== null &&
+         recurso.creado_por_id !== undefined &&
+         recurso.creado_por_id === usuarioActual.id;
+}
+
 // ── RENDERIZAR LISTA ───────────────────────────────────────
 function renderizarLista() {
   const contenedor = document.getElementById('lista');
@@ -302,25 +346,39 @@ function renderizarLista() {
     return;
   }
 
-  contenedor.innerHTML = recursos.map(r => `
-    <div class="tarjeta-recurso ${r.id === idSeleccionado ? 'seleccionada' : ''}"
-         onclick="seleccionarRecurso(${r.id})">
-      <div class="tarjeta-fila-superior">
-        <span class="tarjeta-nombre">${r.nombre}</span>
-        ${chipEstado(r.estado)}
+  contenedor.innerHTML = recursos.map(r => {
+    const botonesPropietario = puedeEditar(r)
+      ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+           <button class="btn-editar-recurso" onclick="event.stopPropagation(); abrirEditar(${r.id})">
+             ✏️ Editar
+           </button>
+           <button class="btn-eliminar-recurso" onclick="event.stopPropagation(); confirmarEliminar(${r.id})">
+             🗑 Eliminar
+           </button>
+         </div>`
+      : '';
+
+    return `
+      <div class="tarjeta-recurso ${r.id === idSeleccionado ? 'seleccionada' : ''}"
+           onclick="seleccionarRecurso(${r.id})">
+        <div class="tarjeta-fila-superior">
+          <span class="tarjeta-nombre">${r.nombre}</span>
+          ${chipEstado(r.estado)}
+        </div>
+        <div class="tarjeta-tipo">
+          ${iconoTipo(r.tipo)}
+          ${etiquetaTipo(r.tipo)}${r.direccion ? ' &middot; ' + r.direccion : ''}
+        </div>
+        ${r.horario_texto ? '<div style="font-size:11px;font-weight:700;color:var(--azul);margin-bottom:5px">' + r.horario_texto + '</div>' : ''}
+        ${r.descripcion ? '<div class="tarjeta-desc">' + r.descripcion + '</div>' : ''}
+        <div class="tarjeta-pie">
+          <span class="tarjeta-req">${r.requisitos || 'Sin requisitos'}</span>
+          <span class="tarjeta-tiempo">${haceCuanto(r.updated_at)}</span>
+        </div>
+        ${botonesPropietario}
       </div>
-      <div class="tarjeta-tipo">
-        ${iconoTipo(r.tipo)}
-        ${etiquetaTipo(r.tipo)}${r.direccion ? ' &middot; ' + r.direccion : ''}
-      </div>
-      ${r.horario_texto ? '<div style="font-size:11px;font-weight:700;color:var(--azul);margin-bottom:5px">' + r.horario_texto + '</div>' : ''}
-      ${r.descripcion ? '<div class="tarjeta-desc">' + r.descripcion + '</div>' : ''}
-      <div class="tarjeta-pie">
-        <span class="tarjeta-req">${r.requisitos || 'Sin requisitos'}</span>
-        <span class="tarjeta-tiempo">${haceCuanto(r.updated_at)}</span>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // ── RENDERIZAR MARCADORES ──────────────────────────────────
@@ -344,13 +402,21 @@ function renderizarMarcadores() {
 
     const marcador = L.marker([r.lat, r.lng], { icon: icono }).addTo(mapa);
 
-    // Popup enriquecido
+    // Popup enriquecido — con botones de acción si el usuario es dueño
+    const botonesPopup = puedeEditar(r)
+      ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' +
+          '<button class="btn-editar-recurso" onclick="abrirEditar(' + r.id + ')">✏️ Editar</button>' +
+          '<button class="btn-eliminar-recurso" onclick="confirmarEliminar(' + r.id + ')">🗑 Eliminar</button>' +
+        '</div>'
+      : '';
+
     const contenidoPopup =
       '<span class="popup-nombre">' + r.nombre + '</span>' +
       (r.descripcion ? '<span class="popup-desc">' + r.descripcion + '</span>' : '') +
-      '<span class="popup-tipo">' + etiquetaTipo(r.tipo) + '</span>';
+      '<span class="popup-tipo">' + etiquetaTipo(r.tipo) + '</span>' +
+      botonesPopup;
 
-    marcador.bindPopup(contenidoPopup, { maxWidth: 260 });
+    marcador.bindPopup(contenidoPopup, { maxWidth: 280 });
     marcador.on('click', () => seleccionarRecurso(r.id));
     marcadores[r.id] = marcador;
   });
@@ -386,17 +452,89 @@ function actualizarEstadisticas() {
     abiertos + ' disponible' + (abiertos !== 1 ? 's' : '') + ' ahora';
 }
 
-// ── MODAL ──────────────────────────────────────────────────
+// ── MODAL — ABRIR EN MODO CREAR ────────────────────────────
 function abrirModal() {
   if (!usuarioActual) {
     window.location.href = '/login/';
     return;
   }
+  // Asegurarse de que el modal esté en modo "crear"
+  ponerModalEnModoCrear();
   document.getElementById('fondo-modal').classList.add('abierto');
   document.getElementById('f-nombre').focus();
   const centro = mapa.getCenter();
   document.getElementById('f-lat').value = centro.lat.toFixed(5);
   document.getElementById('f-lng').value = centro.lng.toFixed(5);
+}
+
+// ── MODAL — ABRIR EN MODO EDITAR ───────────────────────────
+function abrirEditar(id) {
+  if (!usuarioActual) {
+    window.location.href = '/login/';
+    return;
+  }
+
+  const r = recursos.find(x => x.id === id);
+  if (!r) { mostrarToast('No se encontró el recurso.'); return; }
+  if (!puedeEditar(r)) { mostrarToast('No tenés permiso para editar este recurso.'); return; }
+
+  // Poner el modal en modo edición
+  ponerModalEnModoEdicion(id);
+
+  // Rellenar campos con los datos actuales
+  document.getElementById('f-id-edicion').value  = id;
+  document.getElementById('f-nombre').value       = r.nombre || '';
+  document.getElementById('f-tipo').value         = r.tipo || '';
+  document.getElementById('f-req').value          = r.requisitos || '';
+  document.getElementById('f-desc').value         = r.descripcion || '';
+  document.getElementById('f-dir').value          = r.direccion || '';
+  document.getElementById('f-dir-exacta').value   = '';
+  document.getElementById('f-lat').value          = r.lat || '';
+  document.getElementById('f-lng').value          = r.lng || '';
+  document.getElementById('f-apertura').value     = r.hora_apertura || '';
+  document.getElementById('f-cierre').value       = r.hora_cierre || '';
+
+  // Sin horario
+  const sinHorario = r.sin_horario || false;
+  document.getElementById('f-sin-horario').checked = sinHorario;
+  toggleHorario(sinHorario);
+
+  // Días de atención
+  const diasActivos = r.dias_atencion ? r.dias_atencion.split(',').map(d => d.trim()) : [];
+  document.querySelectorAll('#f-dias input[name="dia"]').forEach(cb => {
+    cb.checked = diasActivos.includes(cb.value);
+    estiloDia(cb);
+  });
+
+  // Mostrar ubicación ok si hay coords
+  if (r.lat && r.lng) {
+    document.getElementById('f-ubicacion-ok').style.display = 'block';
+    mapa.setView([r.lat, r.lng], 16, { animate: true });
+  } else {
+    document.getElementById('f-ubicacion-ok').style.display = 'none';
+  }
+
+  document.getElementById('fondo-modal').classList.add('abierto');
+  document.getElementById('f-nombre').focus();
+}
+
+function ponerModalEnModoCrear() {
+  document.getElementById('modal-badge-edicion').style.display = 'none';
+  document.getElementById('modal-titulo').textContent      = 'Registrar recurso';
+  document.getElementById('modal-subtitulo').textContent   = 'Ayudá a que más personas encuentren apoyo cerca';
+  document.getElementById('btn-publicar').textContent      = 'Publicar recurso';
+  document.getElementById('modal-nota').style.display      = 'block';
+  document.getElementById('f-id-edicion').value            = '';
+  limpiarFormulario();
+}
+
+function ponerModalEnModoEdicion(id) {
+  document.getElementById('modal-badge-edicion').style.display = 'inline-block';
+  document.getElementById('modal-titulo').textContent      = 'Editar recurso';
+  document.getElementById('modal-subtitulo').textContent   = 'Modificá los datos de tu publicación';
+  document.getElementById('btn-publicar').textContent      = 'Guardar cambios';
+  document.getElementById('modal-nota').style.display      = 'none';
+  document.getElementById('f-id-edicion').value            = id;
 }
 
 function cerrarModal() {
@@ -407,8 +545,11 @@ function clicFondo(evento) {
   if (evento.target === document.getElementById('fondo-modal')) cerrarModal();
 }
 
-// ── ENVIAR FORMULARIO ──────────────────────────────────────
+// ── ENVIAR FORMULARIO (crear o editar según f-id-edicion) ──
 async function enviarRecurso() {
+  const idEdicion = document.getElementById('f-id-edicion').value;
+  const esModoEdicion = idEdicion !== '';
+
   const nombre = document.getElementById('f-nombre').value.trim();
   const tipo   = document.getElementById('f-tipo').value;
   const lat    = parseFloat(document.getElementById('f-lat').value);
@@ -425,7 +566,7 @@ async function enviarRecurso() {
     mostrarToast('Seleccioná al menos un día de atención');
     return;
   }
-  const sinHorario  = document.getElementById('f-sin-horario').checked;
+  const sinHorario   = document.getElementById('f-sin-horario').checked;
   const horaApertura = document.getElementById('f-apertura').value;
   const horaCierre   = document.getElementById('f-cierre').value;
 
@@ -435,13 +576,13 @@ async function enviarRecurso() {
   }
 
   const datos = {
-    nombre:       nombre,
-    tipo:         tipo,
-    descripcion:  document.getElementById('f-desc').value.trim(),
-    direccion:    (document.getElementById('f-dir-exacta').value.trim() || document.getElementById('f-dir').value.trim()),
-    lat:          lat,
-    lng:          lng,
-    requisitos:   document.getElementById('f-req').value.trim(),
+    nombre:        nombre,
+    tipo:          tipo,
+    descripcion:   document.getElementById('f-desc').value.trim(),
+    direccion:     (document.getElementById('f-dir-exacta').value.trim() || document.getElementById('f-dir').value.trim()),
+    lat:           lat,
+    lng:           lng,
+    requisitos:    document.getElementById('f-req').value.trim(),
     dias_atencion: diasChecked.join(','),
     hora_apertura: sinHorario ? null : horaApertura,
     hora_cierre:   sinHorario ? null : horaCierre,
@@ -450,13 +591,23 @@ async function enviarRecurso() {
 
   const boton = document.getElementById('btn-publicar');
   boton.disabled    = true;
-  boton.textContent = 'Publicando...';
+  boton.textContent = esModoEdicion ? 'Guardando...' : 'Publicando...';
 
   try {
     const csrf = document.cookie.split('; ')
       .find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
-    const respuesta = await fetch(API + '/recursos/', {
-      method:  'POST',
+
+    let url    = API + '/recursos/';
+    let method = 'POST';
+
+    if (esModoEdicion) {
+      // PATCH al endpoint de detalle para actualizar
+      url    = API + '/recursos/' + idEdicion + '/';
+      method = 'PATCH';
+    }
+
+    const respuesta = await fetch(url, {
+      method:  method,
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
       credentials: 'include',
       body:    JSON.stringify(datos),
@@ -464,26 +615,69 @@ async function enviarRecurso() {
 
     if (!respuesta.ok) {
       const error = await respuesta.json();
-      mostrarToast('Hubo un error al guardar. Revisá los datos.');
+      mostrarToast(esModoEdicion ? 'Error al guardar los cambios.' : 'Hubo un error al guardar. Revisá los datos.');
       console.error(error);
       return;
     }
 
     cerrarModal();
     limpiarFormulario();
-    mostrarToast('¡Recurso publicado con éxito!');
+    mostrarToast(esModoEdicion ? '¡Recurso actualizado correctamente!' : '¡Recurso publicado con éxito!');
     cargarRecursos();
 
   } catch {
     mostrarToast('No se pudo conectar con el servidor.');
   } finally {
     boton.disabled    = false;
-    boton.textContent = 'Publicar recurso';
+    boton.textContent = esModoEdicion ? 'Guardar cambios' : 'Publicar recurso';
+  }
+}
+
+// ── ELIMINAR RECURSO ───────────────────────────────────────
+function confirmarEliminar(id) {
+  const r = recursos.find(x => x.id === id);
+  if (!r) return;
+  if (!puedeEditar(r)) { mostrarToast('No tenés permiso para eliminar este recurso.'); return; }
+
+  // Confirmación simple antes de borrar
+  const confirmar = window.confirm(
+    '¿Seguro que querés eliminar "' + r.nombre + '"?\nEsta acción no se puede deshacer.'
+  );
+  if (!confirmar) return;
+
+  eliminarRecurso(id);
+}
+
+async function eliminarRecurso(id) {
+  try {
+    const csrf = document.cookie.split('; ')
+      .find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    const respuesta = await fetch(API + '/recursos/' + id + '/', {
+      method:  'DELETE',
+      headers: { 'X-CSRFToken': csrf },
+      credentials: 'include',
+    });
+
+    if (respuesta.status === 204 || respuesta.ok) {
+      mostrarToast('Recurso eliminado correctamente.');
+      // Cerrar popup si estaba abierto
+      if (marcadores[id]) {
+        mapa.removeLayer(marcadores[id]);
+        delete marcadores[id];
+      }
+      if (idSeleccionado === id) idSeleccionado = null;
+      cargarRecursos();
+    } else {
+      const error = await respuesta.json().catch(() => ({}));
+      mostrarToast(error.error || 'No se pudo eliminar el recurso.');
+    }
+  } catch {
+    mostrarToast('No se pudo conectar con el servidor.');
   }
 }
 
 function limpiarFormulario() {
-  ['f-nombre', 'f-desc', 'f-dir', 'f-dir-exacta', 'f-req', 'f-lat', 'f-lng', 'f-apertura', 'f-cierre'].forEach(function(id) {
+  ['f-nombre', 'f-desc', 'f-dir', 'f-dir-exacta', 'f-req', 'f-lat', 'f-lng', 'f-apertura', 'f-cierre', 'f-id-edicion'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -491,6 +685,7 @@ function limpiarFormulario() {
   if (tipo) tipo.selectedIndex = 0;
   document.querySelectorAll('#f-dias input[name="dia"]').forEach(function(cb) {
     cb.checked = ['lun','mar','mie','jue','vie'].indexOf(cb.value) !== -1;
+    estiloDia(cb);
   });
   var sh = document.getElementById('f-sin-horario');
   if (sh) { sh.checked = false; toggleHorario(false); }
@@ -536,6 +731,7 @@ function mostrarToast(mensaje, duracion = 3000) {
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), duracion);
 }
+
 // ── SESIÓN Y AUTENTICACIÓN ─────────────────────────────────
 async function verificarSesion() {
   try {
@@ -543,13 +739,14 @@ async function verificarSesion() {
     if (res.ok) {
       usuarioActual = await res.json();
       renderizarZonaAuth(true);
+      // Re-renderizar lista para mostrar botones de editar si corresponde
+      renderizarLista();
+      renderizarMarcadores();
     } else {
-      // 401/403 = no logueado, es normal para visitantes
       usuarioActual = null;
       renderizarZonaAuth(false);
     }
   } catch {
-    // Error de red real — igual mostramos la zona auth sin sesión
     usuarioActual = null;
     renderizarZonaAuth(false);
   }
@@ -608,6 +805,8 @@ async function cerrarSesion() {
   } catch {}
   usuarioActual = null;
   renderizarZonaAuth(false);
+  renderizarLista();
+  renderizarMarcadores();
   mostrarToast('Sesión cerrada correctamente');
 }
 
@@ -636,7 +835,7 @@ function buscarDireccion(query) {
         return;
       }
 
-            sugerencias.innerHTML = data.map((lugar) => {
+      sugerencias.innerHTML = data.map((lugar) => {
         const nombre = lugar.display_name.split(',').slice(0, 3).join(', ');
         const lat    = lugar.lat;
         const lon    = lugar.lon;
@@ -647,7 +846,6 @@ function buscarDireccion(query) {
                nombre + '</div>';
       }).join('');
 
-      // Attach click events after innerHTML
       sugerencias.querySelectorAll('._sug-item').forEach(el => {
         el.addEventListener('mouseenter', () => el.style.background = '#eef7f2');
         el.addEventListener('mouseleave', () => el.style.background = 'transparent');
@@ -669,7 +867,6 @@ function seleccionarLugar(lat, lng, nombre) {
   document.getElementById('f-sugerencias').style.display = 'none';
   document.getElementById('f-ubicacion-ok').style.display = 'block';
 
-  // Mover el marcador de preview en el mapa
   if (typeof mapa !== 'undefined') {
     mapa.setView([lat, lng], 16, { animate: true });
   }
@@ -689,6 +886,7 @@ function toggleHorario(sinHorario) {
   if (bloque) bloque.style.opacity = sinHorario ? "0.4" : "1";
   if (diasDiv) diasDiv.style.opacity = sinHorario ? "0.4" : "1";
 }
+
 // ── HELPERS ────────────────────────────────────────────────
 function chipEstado(estado) {
   var map = {
@@ -703,16 +901,15 @@ function chipEstado(estado) {
 function estiloDia(cb) {
   var label = cb.parentElement;
   if (cb.checked) {
-    label.style.background    = 'var(--azul-bg)';
-    label.style.borderColor   = 'var(--azul)';
-    label.style.color         = 'var(--azul)';
+    label.style.background  = 'var(--azul-bg)';
+    label.style.borderColor = 'var(--azul)';
+    label.style.color       = 'var(--azul)';
   } else {
-    label.style.background    = 'transparent';
-    label.style.borderColor   = 'var(--borde)';
-    label.style.color         = 'var(--texto2)';
+    label.style.background  = 'transparent';
+    label.style.borderColor = 'var(--borde)';
+    label.style.color       = 'var(--texto2)';
   }
 }
-
 </script>
 </body>
 </html>

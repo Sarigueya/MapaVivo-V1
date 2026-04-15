@@ -68,6 +68,7 @@ class RecursoSerializer(serializers.ModelSerializer):
     # Estado calculado dinámicamente — solo lectura
     estado            = serializers.SerializerMethodField()
     creado_por_nombre = serializers.SerializerMethodField()
+    creado_por_id     = serializers.SerializerMethodField()
     horario_texto     = serializers.SerializerMethodField()
 
     class Meta:
@@ -80,12 +81,15 @@ class RecursoSerializer(serializers.ModelSerializer):
             # Estado
             'estado', 'sin_stock_hoy', 'horario_texto',
             # Meta
-            'updated_at', 'created_at', 'creado_por_nombre',
+            'updated_at', 'created_at', 'creado_por_nombre','creado_por_id',
         ]
         read_only_fields = [
             'id', 'updated_at', 'created_at',
-            'estado', 'creado_por_nombre', 'horario_texto'
+            'estado', 'creado_por_nombre','creado_por_id', 'horario_texto'
         ]
+
+    def get_creado_por_id(self, obj):  # Para mostrar el ID del usuario que creó el recurso
+        return obj.creado_por_id if obj.creado_por else None
 
     def get_estado(self, obj):
         return obj.calcular_estado()
