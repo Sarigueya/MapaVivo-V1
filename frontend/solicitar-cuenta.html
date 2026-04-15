@@ -368,6 +368,21 @@ select {
           </div>
         </div>
 
+        <!-- Cambio para alert abbeas data -->
+        <div style="background:var(--verde-bg);border:1px solid var(--verde-borde);border-radius:8px;padding:14px 16px;">
+          <label style="display:flex;gap:10px;cursor:pointer;font-size:13px;color:var(--texto2);line-height:1.6">
+            <input type="checkbox" id="acepto-habeas" style="width:auto;margin-top:3px;accent-color:var(--verde)">
+            <span>
+              Autorizo el tratamiento de mis datos personales conforme a la
+              <strong>Ley 1581 de 2012</strong> (Habeas Data) y el
+              <strong>Decreto 1377 de 2013</strong> de Colombia. Los datos serán
+              usados únicamente para la gestión de la cuenta en Mapa Vivo y no
+              serán compartidos con terceros. Puedo revocar esta autorización
+              escribiendo a <em>contacto@mapavivo.org</em>.
+            </span>
+          </label>
+        </div>
+
         <button class="btn-principal" id="btn-enviar" onclick="enviarSolicitud()">
           Enviar solicitud
         </button>
@@ -426,6 +441,7 @@ async function enviarSolicitud() {
   if (!campos.email)      return mostrarAlerta('El correo electrónico es obligatorio.', 'error');
   if (campos.password.length < 8) return mostrarAlerta('La contraseña debe tener al menos 8 caracteres.', 'error');
   if (campos.password !== campos.password2) return mostrarAlerta('Las contraseñas no coinciden.', 'error');
+  if (!document.getElementById('acepto-habeas').checked) return mostrarAlerta('Debes aceptar el tratamiento de datos personales.', 'error');
 
   const btn = document.getElementById('btn-enviar');
   btn.disabled    = true;
