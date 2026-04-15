@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Vivo · Recursos Alimentarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="/static/estilos.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Estilos de marcadores inline: Leaflet los necesita en el documento principal -->
+<style>
+.marcador-contenedor { position: relative; width: 40px; height: 40px; }
+.marcador-onda {
+  position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid;
+  opacity: 0; animation: onda-marcador 2.4s ease-out infinite;
+}
+@keyframes onda-marcador {
+  0%   { transform: scale(.65); opacity: .8; }
+  100% { transform: scale(1.7); opacity: 0;  }
+}
+.marcador-cuerpo {
+  position: absolute; inset: 8px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.85);
+  box-shadow: 0 3px 10px rgba(0,0,0,.22);
+}
+.m-open   .marcador-onda  { border-color: #2d7a4f; animation-duration: 2.6s; }
+.m-open   .marcador-cuerpo { background: #2d7a4f; }
+.m-soon   .marcador-onda  { border-color: #e07b39; animation-duration: 1.8s; }
+.m-soon   .marcador-cuerpo { background: #e07b39; }
+.m-closed .marcador-onda  { border-color: #c94040; animation: none; opacity: .35; }
+.m-closed .marcador-cuerpo { background: #c94040; opacity: .75; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="header-izquierda">
+    <div class="logo-icono"><div class="logo-circulo"></div></div>
+    <span class="logo-nombre">Mapa<em>Vivo</em></span>
+  </div>
+  <div class="header-derecha">
+    <span id="contador-badge">Cargando...</span>
+    <div id="zona-auth">
+      <!-- Se rellena por JS según si hay sesión o no -->
+    </div>
+  </div>
+</header>
+
+<!-- LAYOUT PRINCIPAL -->
+<div id="main">
+
+  <!-- MAPA -->
+  <div id="mapa"></div>
+
+  <!-- PANEL LATERAL -->
+  <aside id="panel">
+
+    <!-- Estadísticas -->
+    <div class="panel-stats">
+      <div class="panel-stats-titulo">Estado de la red hoy</div>
+      <div class="stats-fila">
+        <div class="stat-tarjeta">
+          <span class="stat-numero verde" id="stat-abiertos">—</span>
+          <span class="stat-etiqueta">Abiertos ahora</span>
+        </div>
+        <div class="stat-tarjeta">
+          <span class="stat-numero naranja" id="stat-cierra">—</span>
+          <span class="stat-etiqueta">Cierra pronto</span>
+        </div>
+        <div class="stat-tarjeta">
+          <span class="stat-numero rojo" id="stat-sin-stock">—</span>
+          <span class="stat-etiqueta">Sin stock</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div id="filtros">
+      <button class="filtro activo" data-tipo="todos">Todos</button>
+      <button class="filtro" data-tipo="comedor">Comedor</button>
+      <button class="filtro" data-tipo="banco">Banco</button>
+      <button class="filtro" data-tipo="reparto">Reparto</button>
+      <button class="filtro" data-tipo="canasta">Canasta</button>
+    </div>
+
+    <!-- Lista -->
+    <div id="lista">
+      <div class="cargando">Buscando recursos cercanos...</div>
+    </div>
+
+  </aside>
+</div>
+
+<!-- FAB móvil -->
+<button id="fab" onclick="abrirModal()">+</button>
+
+<!-- MODAL -->
+<div id="fondo-modal" onclick="clicFondo(event)">
+  <div id="modal">
+    <div class="modal-cabecera">
+      <div>
+        <h2>Registrar recurso</h2>
+        <p>Ayudá a que más personas encuentren apoyo cerca</p>
+      </div>
+      <button class="btn-cerrar-modal" onclick="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-cuerpo">
+
+      <div>
+        <label class="campo-etiqueta" for="f-nombre">Nombre del lugar</label>
+        <input id="f-nombre" type="text" placeholder="Ej: Comedor Corazón de Barrio">
+      </div>
+
+      <div class="campo-grid">
+        <div>
+          <label class="campo-etiqueta" for="f-tipo">Tipo de recurso</label>
+          <select id="f-tipo">
+            <option value="">Seleccionar...</option>
+            <option value="comedor">Comedor</option>
+            <option value="banco">Banco de alimentos</option>
+            <option value="reparto">Reparto de viandas</option>
+            <option value="canasta">Entrega de canastas</option>
+          </select>
+        </div>
+      
+      </div>
+
+      <div>
+        <label class="campo-etiqueta" for="f-desc">
+          Descripción
+          <span class="campo-pista">¿Qué ofrecen? ¿En qué horario?</span>
+        </label>
+        <textarea id="f-desc" placeholder="Ej: Almuerzo gratuito de lunes a viernes de 12 a 14 hs. Capacidad para 60 personas."></textarea>
+      </div>
+
+      <div style="position:relative">
+        <label class="campo-etiqueta" for="f-dir">Dirección <span class="campo-pista">El marcador se ubica automáticamente</span></label>
+        <input id="f-dir" type="text" placeholder="Ej: Calle 7 # 4-23, Neiva" autocomplete="off" oninput="buscarDireccion(this.value)">
+        <div id="f-sugerencias" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:1.5px solid var(--verde);border-top:none;border-radius:0 0 8px 8px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:var(--sombra-md)"></div>
+      </div>
+
+      <div id="f-ubicacion-ok" style="display:none;background:var(--verde-bg);border:1px solid var(--verde-borde);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--verde)">
+        Ubicación seleccionada correctamente en el mapa
+      </div>
+      <input id="f-lat" type="hidden">
+      <input id="f-lng" type="hidden">
+
+      <div>
+        <label class="campo-etiqueta" for="f-req">
+          Requisitos
+          <span class="campo-pista">opcional</span>
+        </label>
+        <input id="f-req" type="text" placeholder="Ej: Traer recipiente. Sin requisitos. Solo familias con niños.">
+      </div>
+
+    </div>
+
+    <div class="modal-pie">
+      <button class="btn-publicar" id="btn-publicar" onclick="enviarRecurso()">
+        Publicar recurso
+      </button>
+      <p class="nota-modal">
+        La información se actualiza sola. Si nadie confirma la disponibilidad,<br>
+        el recurso se retira del mapa en 8 horas.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── CONFIGURACIÓN ──────────────────────────────────────────
+const API = '/api';
+
+// ── ESTADO ─────────────────────────────────────────────────
+let recursos       = [];
+let filtroActivo   = 'todos';
+let marcadores     = {};
+let idSeleccionado = null;
+let mapa;
+let usuarioActual  = null;   // null = no logueado
+
+// ── INICIALIZACIÓN ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Inicializar mapa centrado en Neiva, Colombia
+  mapa = L.map('mapa', { zoomControl: false }).setView([2.9273, -75.2819], 13);
+
+  // Tiles CARTO Voyager — claros, amigables, sin bloqueo de referer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(mapa);
+
+  // Controles de zoom abajo a la izquierda
+  L.control.zoom({ position: 'bottomleft' }).addTo(mapa);
+
+  configurarFiltros();
+  cargarRecursos();
+  verificarSesion();
+
+  // Recarga automática cada 2 minutos
+  setInterval(cargarRecursos, 120000);
+});
+
+// ── CARGAR RECURSOS DESDE LA API ───────────────────────────
+async function cargarRecursos() {
+  try {
+    const params = filtroActivo !== 'todos' ? '?tipo=' + filtroActivo : '';
+    const respuesta = await fetch(API + '/recursos/' + params);
+    if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+    const data = await respuesta.json();
+    // La API puede devolver array doble — tomar solo el primero si es así
+    recursos = Array.isArray(data) ? data : [];
+    renderizarLista();
+    renderizarMarcadores();
+    actualizarEstadisticas();
+  } catch (error) {
+    console.error('cargarRecursos error:', error);
+    document.getElementById('lista').innerHTML =
+      '<div class="estado-vacio"><p>Error: ' + error.message + '<br>Recargá con F5.</p></div>';
+  }
+}
+
+// ── FILTROS ────────────────────────────────────────────────
+function configurarFiltros() {
+  document.querySelectorAll('.filtro').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filtro').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+      filtroActivo = btn.dataset.tipo;
+      cargarRecursos();
+    });
+  });
+}
+
+// ── RENDERIZAR LISTA ───────────────────────────────────────
+function renderizarLista() {
+  const contenedor = document.getElementById('lista');
+
+  if (!recursos.length) {
+    contenedor.innerHTML = '<div class="estado-vacio"><p>No hay recursos registrados<br>de este tipo en este momento.<br><br>¡Podés ser el primero en agregar uno!</p></div>';
+    return;
+  }
+
+  contenedor.innerHTML = recursos.map(r => `
+    <div class="tarjeta-recurso ${r.id === idSeleccionado ? 'seleccionada' : ''}"
+         onclick="seleccionarRecurso(${r.id})">
+      <div class="tarjeta-fila-superior">
+        <span class="tarjeta-nombre">${r.nombre}</span>
+        ${chipEstado(r.estado)}
+      </div>
+      <div class="tarjeta-tipo">
+        ${iconoTipo(r.tipo)}
+        ${etiquetaTipo(r.tipo)}${r.direccion ? ' &middot; ' + r.direccion : ''}
+      </div>
+      ${r.horario_texto ? '<div style="font-size:11px;font-weight:700;color:var(--azul);margin-bottom:5px">' + r.horario_texto + '</div>' : ''}
+      ${r.descripcion ? '<div class="tarjeta-desc">' + r.descripcion + '</div>' : ''}
+      <div class="tarjeta-pie">
+        <span class="tarjeta-req">${r.requisitos || 'Sin requisitos'}</span>
+        <span class="tarjeta-tiempo">${haceCuanto(r.updated_at)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── RENDERIZAR MARCADORES ──────────────────────────────────
+function renderizarMarcadores() {
+  // Eliminar marcadores anteriores
+  Object.values(marcadores).forEach(m => mapa.removeLayer(m));
+  marcadores = {};
+
+  recursos.forEach(r => {
+    if (!r.lat || !r.lng) return;
+
+    const icono = L.divIcon({
+      className: '',
+      html: '<div class="marcador-contenedor m-' + r.estado + '">' +
+              '<div class="marcador-onda"></div>' +
+              '<div class="marcador-cuerpo"></div>' +
+            '</div>',
+      iconSize:   [40, 40],
+      iconAnchor: [20, 20]
+    });
+
+    const marcador = L.marker([r.lat, r.lng], { icon: icono }).addTo(mapa);
+
+    // Popup enriquecido
+    const contenidoPopup =
+      '<span class="popup-nombre">' + r.nombre + '</span>' +
+      (r.descripcion ? '<span class="popup-desc">' + r.descripcion + '</span>' : '') +
+      '<span class="popup-tipo">' + etiquetaTipo(r.tipo) + '</span>';
+
+    marcador.bindPopup(contenidoPopup, { maxWidth: 260 });
+    marcador.on('click', () => seleccionarRecurso(r.id));
+    marcadores[r.id] = marcador;
+  });
+}
+
+// ── SELECCIONAR RECURSO ────────────────────────────────────
+function seleccionarRecurso(id) {
+  idSeleccionado = id;
+  renderizarLista();
+
+  const r = recursos.find(x => x.id === id);
+  if (r && marcadores[id]) {
+    mapa.setView([r.lat, r.lng], 16, { animate: true });
+    marcadores[id].openPopup();
+  }
+
+  // Scroll suave a la tarjeta
+  document.querySelector('.tarjeta-recurso.seleccionada')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── ESTADÍSTICAS ───────────────────────────────────────────
+function actualizarEstadisticas() {
+  const abiertos  = recursos.filter(r => r.estado === 'open').length;
+  const cierran   = recursos.filter(r => r.estado === 'soon').length;
+  const sinStock  = recursos.filter(r => r.estado === 'closed').length;
+
+  document.getElementById('stat-abiertos').textContent  = abiertos;
+  document.getElementById('stat-cierra').textContent    = cierran;
+  document.getElementById('stat-sin-stock').textContent = sinStock;
+
+  document.getElementById('contador-badge').textContent =
+    abiertos + ' disponible' + (abiertos !== 1 ? 's' : '') + ' ahora';
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function abrirModal() {
+  if (!usuarioActual) {
+    window.location.href = '/login/';
+    return;
+  }
+  document.getElementById('fondo-modal').classList.add('abierto');
+  document.getElementById('f-nombre').focus();
+  const centro = mapa.getCenter();
+  document.getElementById('f-lat').value = centro.lat.toFixed(5);
+  document.getElementById('f-lng').value = centro.lng.toFixed(5);
+}
+
+function cerrarModal() {
+  document.getElementById('fondo-modal').classList.remove('abierto');
+}
+
+function clicFondo(evento) {
+  if (evento.target === document.getElementById('fondo-modal')) cerrarModal();
+}
+
+// ── ENVIAR FORMULARIO ──────────────────────────────────────
+async function enviarRecurso() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const tipo   = document.getElementById('f-tipo').value;
+  const lat    = parseFloat(document.getElementById('f-lat').value);
+  const lng    = parseFloat(document.getElementById('f-lng').value);
+
+  if (!nombre) { mostrarToast('Por favor escribí el nombre del lugar'); return; }
+  if (!tipo)   { mostrarToast('Seleccioná el tipo de recurso'); return; }
+  if (isNaN(lat) || isNaN(lng)) { mostrarToast('Las coordenadas no son válidas'); return; }
+
+  // Recoger días seleccionados
+  const diasChecked = Array.from(document.querySelectorAll('#f-dias input[name="dia"]:checked'))
+    .map(cb => cb.value);
+  if (!diasChecked.length && !document.getElementById('f-sin-horario').checked) {
+    mostrarToast('Seleccioná al menos un día de atención');
+    return;
+  }
+  const sinHorario  = document.getElementById('f-sin-horario').checked;
+  const horaApertura = document.getElementById('f-apertura').value;
+  const horaCierre   = document.getElementById('f-cierre').value;
+
+  if (!sinHorario && (!horaApertura || !horaCierre)) {
+    mostrarToast('Ingresá la hora de apertura y cierre, o marcá "Sin horario fijo"');
+    return;
+  }
+
+  const datos = {
+    nombre:       nombre,
+    tipo:         tipo,
+    descripcion:  document.getElementById('f-desc').value.trim(),
+    direccion:    document.getElementById('f-dir').value.trim(),
+    lat:          lat,
+    lng:          lng,
+    requisitos:   document.getElementById('f-req').value.trim(),
+    dias_atencion: diasChecked.join(','),
+    hora_apertura: sinHorario ? null : horaApertura,
+    hora_cierre:   sinHorario ? null : horaCierre,
+    sin_horario:   sinHorario,
+  };
+
+  const boton = document.getElementById('btn-publicar');
+  boton.disabled    = true;
+  boton.textContent = 'Publicando...';
+
+  try {
+    const csrf = document.cookie.split('; ')
+      .find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    const respuesta = await fetch(API + '/recursos/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      credentials: 'include',
+      body:    JSON.stringify(datos),
+    });
+
+    if (!respuesta.ok) {
+      const error = await respuesta.json();
+      mostrarToast('Hubo un error al guardar. Revisá los datos.');
+      console.error(error);
+      return;
+    }
+
+    cerrarModal();
+    limpiarFormulario();
+    mostrarToast('¡Recurso publicado con éxito!');
+    cargarRecursos();
+
+  } catch {
+    mostrarToast('No se pudo conectar con el servidor.');
+  } finally {
+    boton.disabled    = false;
+    boton.textContent = 'Publicar recurso';
+  }
+}
+
+function limpiarFormulario() {
+  ['f-nombre', 'f-desc', 'f-dir', 'f-req', 'f-lat', 'f-lng', 'f-apertura', 'f-cierre'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var tipo = document.getElementById('f-tipo');
+  if (tipo) tipo.selectedIndex = 0;
+  document.querySelectorAll('#f-dias input[name="dia"]').forEach(function(cb) {
+    cb.checked = ['lun','mar','mie','jue','vie'].indexOf(cb.value) !== -1;
+  });
+  var sh = document.getElementById('f-sin-horario');
+  if (sh) { sh.checked = false; toggleHorario(false); }
+  var ok = document.getElementById('f-ubicacion-ok');
+  if (ok) ok.style.display = 'none';
+  var sug = document.getElementById('f-sugerencias');
+  if (sug) sug.style.display = 'none';
+}
+
+function etiquetaTipo(tipo) {
+  const tipos = {
+    comedor: 'Comedor',
+    banco:   'Banco de alimentos',
+    reparto: 'Reparto de viandas',
+    canasta: 'Entrega de canastas',
+  };
+  return tipos[tipo] || tipo;
+}
+
+function iconoTipo(tipo) {
+  const iconos = {
+    comedor: '<svg viewBox="0 0 12 12" fill="none"><path d="M2 2v8M6 2v4c0 1.1.9 2 2 2h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+    banco:   '<svg viewBox="0 0 12 12" fill="none"><rect x="1" y="4" width="10" height="7" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 4V3a2 2 0 014 0v1" stroke="currentColor" stroke-width="1.2"/></svg>',
+    reparto: '<svg viewBox="0 0 12 12" fill="none"><path d="M1 8V4l3-3h4l3 3v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3.5" cy="9" r="1.2" stroke="currentColor" stroke-width="1.2"/><circle cx="8.5" cy="9" r="1.2" stroke="currentColor" stroke-width="1.2"/></svg>',
+    canasta: '<svg viewBox="0 0 12 12" fill="none"><path d="M1 5h10l-1.5 5h-7L1 5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M3.5 5L6 2l2.5 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+  return iconos[tipo] || '';
+}
+
+function haceCuanto(iso) {
+  if (!iso) return '';
+  const minutos = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if (minutos < 1)  return 'Justo ahora';
+  if (minutos < 60) return 'Hace ' + minutos + ' min';
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24)   return 'Hace ' + horas + ' h';
+  return 'Hace ' + Math.floor(horas / 24) + ' días';
+}
+
+function mostrarToast(mensaje, duracion = 3000) {
+  const toast = document.getElementById('toast');
+  toast.textContent = mensaje;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), duracion);
+}
+// ── SESIÓN Y AUTENTICACIÓN ─────────────────────────────────
+async function verificarSesion() {
+  try {
+    const res = await fetch(API + '/auth/perfil/', { credentials: 'include' });
+    if (res.ok) {
+      usuarioActual = await res.json();
+      renderizarZonaAuth(true);
+    } else {
+      // 401/403 = no logueado, es normal para visitantes
+      usuarioActual = null;
+      renderizarZonaAuth(false);
+    }
+  } catch {
+    // Error de red real — igual mostramos la zona auth sin sesión
+    usuarioActual = null;
+    renderizarZonaAuth(false);
+  }
+}
+
+function renderizarZonaAuth(logueado) {
+  const zona = document.getElementById('zona-auth');
+  if (!zona) return;
+
+  if (logueado && usuarioActual) {
+    const nombre = (usuarioActual.organizacion && usuarioActual.organizacion.nombre_org)
+      ? usuarioActual.organizacion.nombre_org
+      : usuarioActual.username;
+
+    const esAdmin = usuarioActual.is_superuser;
+    const panelLink = esAdmin
+      ? '<a href="/admin-panel/" style="font-size:12px;color:var(--texto2);text-decoration:none;' +
+          'padding:7px 12px;border:1px solid var(--borde);border-radius:99px;background:var(--surface);">Panel admin</a>'
+      : '';
+    const miPerfilLink = '<a href="/mi-perfil/" style="font-size:12px;color:var(--texto2);text-decoration:none;' +
+      'padding:7px 12px;border:1px solid var(--borde);border-radius:99px;background:var(--surface);">Mi perfil</a>';
+    zona.innerHTML =
+      '<span style="font-size:12px;background:var(--azul-bg);color:var(--azul);' +
+        'border:1px solid var(--azul-borde);padding:4px 12px;border-radius:99px;' +
+        'font-weight:700;white-space:nowrap;">' + nombre + '</span>' +
+      (esAdmin ? '' : '<button class="btn-agregar" onclick="abrirModal()" style="display:flex;align-items:center;gap:6px;">' +
+        '<svg width="14" height="14" viewBox="0 0 14 14" fill="none">' +
+          '<path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+        '</svg> Agregar recurso</button>') +
+      panelLink + miPerfilLink +
+      '<button onclick="cerrarSesion()" style="font-size:12px;color:var(--texto3);' +
+        'background:transparent;border:1px solid var(--borde);padding:7px 12px;' +
+        'border-radius:99px;cursor:pointer;font-family:var(--fuente);">Salir</button>';
+  } else {
+    zona.innerHTML =
+      '<a href="/solicitar-cuenta/" style="font-size:12px;color:var(--texto2);' +
+        'text-decoration:none;padding:7px 16px;border:2px solid var(--borde);' +
+        'border-radius:99px;background:var(--surface);font-weight:700;">' +
+        'Registrar organización</a>' +
+      '<a href="/login/" style="font-size:13px;font-weight:800;color:#fff;' +
+        'text-decoration:none;padding:8px 20px;border:none;' +
+        'border-radius:99px;background:var(--azul);' +
+        'box-shadow:0 2px 10px rgba(37,99,235,.3);">Iniciar sesión</a>';
+  }
+}
+
+async function cerrarSesion() {
+  try {
+    const csrf = document.cookie.split('; ')
+      .find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    await fetch(API + '/auth/logout/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf },
+      credentials: 'include',
+    });
+  } catch {}
+  usuarioActual = null;
+  renderizarZonaAuth(false);
+  mostrarToast('Sesión cerrada correctamente');
+}
+
+// ── GEOCODIFICACIÓN (Nominatim / OpenStreetMap) ────────────
+let geocodingTimer = null;
+
+function buscarDireccion(query) {
+  const sugerencias = document.getElementById('f-sugerencias');
+  clearTimeout(geocodingTimer);
+
+  if (query.length < 4) {
+    sugerencias.style.display = 'none';
+    return;
+  }
+
+  geocodingTimer = setTimeout(async () => {
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' +
+                  encodeURIComponent(query + ', Neiva, Colombia');
+      const res  = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+      const data = await res.json();
+
+      if (!data.length) {
+        sugerencias.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--texto3)">No se encontraron resultados</div>';
+        sugerencias.style.display = 'block';
+        return;
+      }
+
+            sugerencias.innerHTML = data.map((lugar) => {
+        const nombre = lugar.display_name.split(',').slice(0, 3).join(', ');
+        const lat    = lugar.lat;
+        const lon    = lugar.lon;
+        const nomEsc = nombre.replace(/'/g, '').replace(/"/g, '');
+        return '<div class="_sug-item" ' +
+               'data-lat="' + lat + '" data-lon="' + lon + '" data-nombre="' + nomEsc + '" ' +
+               'style="padding:10px 14px;font-size:13px;color:var(--texto);cursor:pointer;border-bottom:1px solid var(--borde);">' +
+               nombre + '</div>';
+      }).join('');
+
+      // Attach click events after innerHTML
+      sugerencias.querySelectorAll('._sug-item').forEach(el => {
+        el.addEventListener('mouseenter', () => el.style.background = '#eef7f2');
+        el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+        el.addEventListener('click', () => {
+          seleccionarLugar(el.dataset.lat, el.dataset.lon, el.dataset.nombre);
+        });
+      });
+      sugerencias.style.display = 'block';
+    } catch {
+      sugerencias.style.display = 'none';
+    }
+  }, 400);
+}
+
+function seleccionarLugar(lat, lng, nombre) {
+  document.getElementById('f-lat').value = lat;
+  document.getElementById('f-lng').value = lng;
+  document.getElementById('f-dir').value = nombre;
+  document.getElementById('f-sugerencias').style.display = 'none';
+  document.getElementById('f-ubicacion-ok').style.display = 'block';
+
+  // Mover el marcador de preview en el mapa
+  if (typeof mapa !== 'undefined') {
+    mapa.setView([lat, lng], 16, { animate: true });
+  }
+}
+
+// Cerrar sugerencias al hacer clic fuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('#f-sugerencias') && e.target.id !== 'f-dir') {
+    const s = document.getElementById('f-sugerencias');
+    if (s) s.style.display = 'none';
+  }
+});
+
+function toggleHorario(sinHorario) {
+  var bloque = document.getElementById("bloque-horario");
+  var diasDiv = document.getElementById("f-dias");
+  if (bloque) bloque.style.opacity = sinHorario ? "0.4" : "1";
+  if (diasDiv) diasDiv.style.opacity = sinHorario ? "0.4" : "1";
+}
+// ── HELPERS ────────────────────────────────────────────────
+function chipEstado(estado) {
+  var map = {
+    open:   ['Abierto',    'estado-open'],
+    soon:   ['Cierra hoy', 'estado-soon'],
+    closed: ['Sin stock',  'estado-closed']
+  };
+  var info = map[estado] || ['?', 'estado-closed'];
+  return '<span class="estado-chip ' + info[1] + '">' + info[0] + '</span>';
+}
+
+</script>
+</body>
+</html>

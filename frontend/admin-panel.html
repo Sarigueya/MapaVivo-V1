@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración · MapaVivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/estilos.css">
+<style>
+body { overflow: auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+
+.panel-layout { display: flex; flex: 1; }
+
+.sidebar-nav {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--borde);
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-seccion {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--texto3);
+  padding: 0 20px;
+  margin: 12px 0 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto2);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { background: var(--bg); color: var(--texto); }
+.nav-item.activo { background: var(--verde-bg); color: var(--verde); border-left-color: var(--verde); font-weight: 600; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--naranja-bg);
+  color: var(--naranja);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+.nav-badge.verde { background: var(--verde-bg); color: var(--verde); }
+
+.contenido-principal {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+  max-width: 900px;
+}
+
+.page-titulo {
+  font-family: var(--fuente);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 4px;
+}
+.page-subtitulo { font-size: 14px; color: var(--texto2); margin-bottom: 24px; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+}
+.stat-card .num {
+  font-family: var(--fuente);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-card .num.verde   { color: var(--verde); }
+.stat-card .num.naranja { color: var(--naranja); }
+.stat-card .num.rojo    { color: var(--rojo); }
+.stat-card .lbl { font-size: 12px; color: var(--texto3); }
+
+.seccion-titulo {
+  font-family: var(--fuente);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabla-contenedor {
+  background: var(--surface);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto3);
+  padding: 10px 16px;
+  text-align: left;
+  background: var(--bg);
+  border-bottom: 1px solid var(--borde);
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 13px;
+  color: var(--texto);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+
+.org-nombre { font-weight: 600; color: var(--texto); display: block; margin-bottom: 2px; }
+.org-sub    { font-size: 11px; color: var(--texto3); }
+
+.chip-estado {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+  letter-spacing: .03em;
+  display: inline-block;
+}
+.chip-pendiente { background: var(--naranja-bg); color: var(--naranja); border: 1px solid #f0c49a; }
+.chip-aprobada  { background: var(--verde-bg);   color: var(--verde);   border: 1px solid var(--verde-borde); }
+.chip-rechazada { background: var(--rojo-bg);     color: var(--rojo);    border: 1px solid #f0b8b8; }
+
+.acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.btn-accion {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--borde);
+  background: transparent;
+  color: var(--texto2);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-accion:hover    { border-color: var(--texto2); color: var(--texto); }
+.btn-accion.aprobar  { background: var(--verde-bg); color: var(--verde); border-color: var(--verde-borde); }
+.btn-accion.aprobar:hover { background: var(--verde); color: #fff; }
+.btn-accion.rechazar { background: var(--rojo-bg); color: var(--rojo); border-color: #f0b8b8; }
+.btn-accion.rechazar:hover { background: var(--rojo); color: #fff; }
+.btn-accion.reset    { background: var(--naranja-bg); color: var(--naranja); border-color: #f0c49a; }
+
+.vacio { padding: 32px; text-align: center; color: var(--texto3); font-size: 13px; }
+
+/* Modal de detalle */
+.modal-fondo {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(44,36,22,.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-fondo.abierto { display: flex; }
+.modal-detalle {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  width: 100%;
+  max-width: 500px;
+  box-shadow: var(--sombra-lg);
+  overflow: hidden;
+}
+.modal-cabecera {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--borde);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-cabecera h3 {
+  font-family: var(--fuente);
+  font-size: 18px; font-weight: 700; color: var(--texto);
+}
+.btn-cerrar {
+  background: var(--bg); border: 1px solid var(--borde);
+  color: var(--texto2); width: 30px; height: 30px;
+  border-radius: var(--r-sm); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-cuerpo { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.detalle-fila { display: flex; gap: 12px; }
+.detalle-lbl  { font-size: 12px; font-weight: 600; color: var(--texto3); min-width: 100px; }
+.detalle-val  { font-size: 13px; color: var(--texto); flex: 1; line-height: 1.5; }
+.modal-pie { padding: 0 24px 20px; display: flex; gap: 8px; justify-content: flex-end; }
+
+.btn-principal {
+  padding: 10px 20px;
+  background: var(--verde); color: #fff;
+  border: none; border-radius: var(--r-md);
+  font-family: var(--fuente); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-principal:hover { background: var(--verde-claro); }
+.btn-secundario {
+  padding: 10px 20px;
+  background: var(--rojo-bg); color: var(--rojo);
+  border: 1px solid #f0b8b8; border-radius: var(--r-md);
+  font-family: var(--fuente); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-secundario:hover { background: var(--rojo); color: #fff; }
+.btn-neutro {
+  padding: 10px 20px;
+  background: transparent; color: var(--texto2);
+  border: 1px solid var(--borde); border-radius: var(--r-md);
+  font-family: var(--fuente); font-size: 13px; font-weight: 500;
+  cursor: pointer;
+}
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--texto); color: #fff;
+  font-size: 13px; font-weight: 500;
+  padding: 10px 22px; border-radius: 99px;
+  z-index: 2000; transition: transform .3s cubic-bezier(.34,1.5,.64,1);
+  pointer-events: none; white-space: nowrap; box-shadow: var(--sombra-lg);
+}
+#toast.visible { transform: translateX(-50%) translateY(0); }
+
+/* Header */
+.mini-header {
+  height: 56px; background: var(--surface);
+  border-bottom: 1px solid var(--borde);
+  display: flex; align-items: center; padding: 0 24px;
+  flex-shrink: 0; box-shadow: var(--sombra-sm);
+}
+.mini-header a.logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.mini-header .logo-icono {
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  background: var(--verde-bg); border: 1.5px solid var(--verde-borde);
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-header .logo-circulo { width: 11px; height: 11px; border-radius: 50%; background: var(--verde); }
+.mini-header .logo-nombre  { font-family: var(--fuente); font-size: 18px; font-weight: 700; color: var(--texto); }
+.mini-header .logo-nombre em { font-style: normal; color: var(--verde); }
+.header-acciones { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.header-usuario { font-size: 12px; color: var(--texto2); }
+.btn-salir {
+  font-size: 12px; color: var(--texto3);
+  background: transparent; border: 1px solid var(--borde);
+  padding: 6px 12px; border-radius: 99px; cursor: pointer;
+  font-family: var(--fuente);
+}
+
+/* Password box */
+.pass-box {
+  background: var(--verde-bg); border: 1px solid var(--verde-borde);
+  border-radius: var(--r-md); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.pass-box .pass-val {
+  font-family: monospace; font-size: 18px; font-weight: 600;
+  color: var(--verde); letter-spacing: .1em;
+}
+.pass-box .pass-lbl { font-size: 12px; color: var(--texto2); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<header class="mini-header">
+  <a href="/" class="logo-link">
+    <div class="logo-icono"><div class="logo-circulo"></div></div>
+    <span class="logo-nombre">Mapa<em>Vivo</em></span>
+  </a>
+  <div class="header-acciones">
+    <span class="header-usuario" id="nombre-admin"></span>
+    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+  </div>
+</header>
+
+<div class="panel-layout">
+
+  <!-- NAV -->
+  <nav class="sidebar-nav">
+    <div class="nav-seccion">Panel</div>
+    <a class="nav-item activo" onclick="mostrarSeccion('organizaciones')">
+      Organizaciones
+      <span class="nav-badge" id="badge-pendientes">0</span>
+    </a>
+    <a class="nav-item" onclick="mostrarSeccion('recursos')">
+      Recursos activos
+      <span class="nav-badge verde" id="badge-recursos">0</span>
+    </a>
+    <div class="nav-seccion">Mi cuenta</div>
+    <a class="nav-item" href="/mi-perfil/">Mi perfil</a>
+    <a class="nav-item" href="/">Ver mapa</a>
+  </nav>
+
+  <!-- CONTENIDO -->
+  <main class="contenido-principal">
+
+    <!-- Estadísticas -->
+    <div class="page-titulo">Panel de administración</div>
+    <div class="page-subtitulo">Gestioná organizaciones y recursos de la red</div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num naranja" id="s-pendientes">0</div><div class="lbl">Pendientes</div></div>
+      <div class="stat-card"><div class="num verde"   id="s-aprobadas">0</div><div class="lbl">Aprobadas</div></div>
+      <div class="stat-card"><div class="num rojo"    id="s-rechazadas">0</div><div class="lbl">Rechazadas</div></div>
+      <div class="stat-card"><div class="num"         id="s-recursos">0</div><div class="lbl">Recursos activos</div></div>
+    </div>
+
+    <!-- Sección organizaciones -->
+    <div id="seccion-organizaciones">
+      <div class="seccion-titulo">Solicitudes de organizaciones</div>
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Organización</th>
+              <th>Estado</th>
+              <th>Registrada</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-orgs">
+            <tr><td colspan="4" class="vacio">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sección recursos -->
+    <div id="seccion-recursos" style="display:none">
+      <div class="seccion-titulo">Recursos activos en el mapa</div>
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Recurso</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Organización</th>
+              <th>Expira</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-recursos">
+            <tr><td colspan="6" class="vacio">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal detalle organización -->
+<div class="modal-fondo" id="modal-fondo" onclick="clicFondo(event)">
+  <div class="modal-detalle">
+    <div class="modal-cabecera-admin">
+      <h3 id="modal-nombre-org">Detalle de organización</h3>
+      <button class="btn-cerrar-admin" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-cuerpo-admin" id="modal-cuerpo"></div>
+    <div class="modal-pie-admin" id="modal-pie"></div>
+  </div>
+</div>
+
+<!-- Modal contraseña -->
+<div class="modal-fondo" id="modal-pass-fondo" onclick="clicFondoPass(event)">
+  <div class="modal-detalle">
+    <div class="modal-cabecera-admin">
+      <h3>Contraseña temporal</h3>
+      <button class="btn-cerrar-admin" onclick="cerrarModalPass()">✕</button>
+    </div>
+    <div class="modal-cuerpo-admin">
+      <p style="font-size:13px;color:var(--texto2);line-height:1.6;margin-bottom:8px">
+        Se generó una contraseña temporal para esta organización.<br>
+        Compartila con el responsable — deberán cambiarla desde su perfil.
+      </p>
+      <div class="pass-box">
+        <div>
+          <div class="pass-lbl">Contraseña temporal generada</div>
+          <div class="pass-val" id="pass-generada">—</div>
+        </div>
+        <button class="btn-accion" onclick="copiarPass()">Copiar</button>
+      </div>
+    </div>
+    <div class="modal-pie-admin">
+      <button class="btn-neutro-admin" onclick="cerrarModalPass()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let orgActual = null;
+
+// ── INIT ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await verificarAdmin();
+  cargarDatos();
+});
+
+async function verificarAdmin() {
+  try {
+    const res = await fetch(API + '/auth/perfil/', { credentials: 'include' });
+    if (!res.ok) { window.location.href = '/login/'; return; }
+    const user = await res.json();
+    if (!user.is_superuser) { window.location.href = '/'; return; }
+    document.getElementById('nombre-admin').textContent = 'Admin: ' + user.username;
+  } catch { window.location.href = '/login/'; }
+}
+
+async function cargarDatos() {
+  await Promise.all([cargarOrganizaciones(), cargarRecursos()]);
+}
+
+// ── ORGANIZACIONES ────────────────────────────────────────
+async function cargarOrganizaciones() {
+  try {
+    const res  = await fetch(API + '/admin/organizaciones/', { credentials: 'include' });
+    const data = await res.json();
+    const pendientes  = data.filter(o => o.estado === 'pendiente').length;
+    const aprobadas   = data.filter(o => o.estado === 'aprobada').length;
+    const rechazadas  = data.filter(o => o.estado === 'rechazada').length;
+
+    document.getElementById('s-pendientes').textContent  = pendientes;
+    document.getElementById('s-aprobadas').textContent   = aprobadas;
+    document.getElementById('s-rechazadas').textContent  = rechazadas;
+    document.getElementById('badge-pendientes').textContent = pendientes;
+
+    const tbody = document.getElementById('tabla-orgs');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="vacio">No hay organizaciones registradas todavía.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(org => `
+      <tr>
+        <td>
+          <span class="org-nombre">${org.nombre_org}</span>
+          <span class="org-sub">${org.email} · ${org.username}</span>
+        </td>
+        <td><span class="chip-estado chip-${org.estado}">${etiquetaEstado(org.estado)}</span></td>
+        <td style="color:var(--texto3);font-size:12px">${formatearFecha(org.creada_en)}</td>
+        <td>
+          <div class="acciones">
+            <button class="btn-accion" onclick="verDetalle(${org.id})">Ver detalle</button>
+            ${org.estado === 'pendiente' ? `
+              <button class="btn-accion aprobar"  onclick="cambiarEstado(${org.id},'aprobada')">Aprobar</button>
+              <button class="btn-accion rechazar" onclick="cambiarEstado(${org.id},'rechazada')">Rechazar</button>
+            ` : ''}
+            ${org.estado === 'aprobada' ? `
+              <button class="btn-accion reset"    onclick="resetearPass(${org.id}, '${org.nombre_org}')">Reset contraseña</button>
+              <button class="btn-accion rechazar" onclick="cambiarEstado(${org.id},'rechazada')">Revocar</button>
+            ` : ''}
+            ${org.estado === 'rechazada' ? `
+              <button class="btn-accion aprobar"  onclick="cambiarEstado(${org.id},'aprobada')">Reactivar</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch { toast('Error al cargar organizaciones'); }
+}
+
+// ── RECURSOS ──────────────────────────────────────────────
+async function cargarRecursos() {
+  try {
+    const res  = await fetch(API + '/recursos/', { credentials: 'include' });
+    const data = await res.json();
+    document.getElementById('s-recursos').textContent      = data.length;
+    document.getElementById('badge-recursos').textContent  = data.length;
+
+    const tbody = document.getElementById('tabla-recursos');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="vacio">No hay recursos activos.</td></tr>';
+      return;
+    }
+    const tipos = { comedor:'Comedor', banco:'Banco', reparto:'Reparto', canasta:'Canasta' };
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td><strong>${r.nombre}</strong><br><span style="font-size:11px;color:var(--texto3)">${r.direccion||'—'}</span></td>
+        <td style="font-size:12px;color:var(--texto2)">${tipos[r.tipo]||r.tipo}</td>
+        <td><span class="chip-estado chip-${r.estado==='open'?'aprobada':r.estado==='soon'?'pendiente':'rechazada'}">
+          ${r.estado==='open'?'Abierto':r.estado==='soon'?'Cierra pronto':'Sin stock'}
+        </span></td>
+        <td style="font-size:12px;color:var(--texto2)">${r.creado_por_nombre||'—'}</td>
+        <td style="font-size:11px;color:var(--texto3)">${formatearFecha(r.expires_at)}</td>
+        <td>
+          <button class="btn-accion rechazar" onclick="eliminarRecurso(${r.id})">Eliminar</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch { toast('Error al cargar recursos'); }
+}
+
+// ── ACCIONES ──────────────────────────────────────────────
+async function cambiarEstado(id, estado) {
+  const csrf = getCsrf();
+  try {
+    const res = await fetch(API + '/admin/organizaciones/' + id + '/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      credentials: 'include',
+      body: JSON.stringify({ estado }),
+    });
+    if (res.ok) {
+      toast(estado === 'aprobada' ? 'Organización aprobada ✓' :
+            estado === 'rechazada' ? 'Organización rechazada' : 'Estado actualizado');
+      cerrarModal();
+      cargarOrganizaciones();
+    } else { toast('Error al actualizar el estado'); }
+  } catch { toast('Error de conexión'); }
+}
+
+async function verDetalle(id) {
+  try {
+    const res  = await fetch(API + '/admin/organizaciones/' + id + '/', { credentials: 'include' });
+    const org  = await res.json();
+    orgActual  = org;
+    document.getElementById('modal-nombre-org').textContent = org.nombre_org;
+    const campos = [
+      ['Usuario',     org.username],
+      ['Correo',      org.email],
+      ['Descripción', org.descripcion],
+      ['Dirección',   org.direccion],
+      ['Teléfono',    org.telefono || '—'],
+      ['Sitio web',   org.sitio_web || '—'],
+      ['Estado',      etiquetaEstado(org.estado)],
+      ['Registrada',  formatearFecha(org.creada_en)],
+    ];
+    document.getElementById('modal-cuerpo').innerHTML = campos.map(([l, v]) =>
+      `<div class="detalle-fila"><span class="detalle-lbl">${l}</span><span class="detalle-val">${v}</span></div>`
+    ).join('');
+    const pie = document.getElementById('modal-pie');
+    pie.innerHTML = '';
+    pie.appendChild(Object.assign(document.createElement('button'), {
+      className: 'btn-neutro', textContent: 'Cerrar', onclick: cerrarModal
+    }));
+    if (org.estado === 'pendiente') {
+      const ba = Object.assign(document.createElement('button'), {
+        className: 'btn-secundario', textContent: 'Rechazar',
+        onclick: () => cambiarEstado(org.id, 'rechazada')
+      });
+      const bb = Object.assign(document.createElement('button'), {
+        className: 'btn-principal', textContent: 'Aprobar',
+        onclick: () => cambiarEstado(org.id, 'aprobada')
+      });
+      pie.appendChild(ba); pie.appendChild(bb);
+    }
+    document.getElementById('modal-fondo').classList.add('abierto');
+  } catch { toast('Error al cargar el detalle'); }
+}
+
+async function resetearPass(id, nombre) {
+  const csrf = getCsrf();
+  try {
+    const res  = await fetch(API + '/admin/organizaciones/' + id + '/reset-password/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf },
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('pass-generada').textContent = data.password_temporal;
+      document.getElementById('modal-pass-fondo').classList.add('abierto');
+    } else { toast('Error al resetear la contraseña'); }
+  } catch { toast('Error de conexión'); }
+}
+
+async function eliminarRecurso(id) {
+  if (!confirm('¿Seguro que querés eliminar este recurso?')) return;
+  const csrf = getCsrf();
+  try {
+    const res = await fetch(API + '/recursos/' + id + '/', {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': csrf },
+      credentials: 'include',
+    });
+    if (res.status === 204) { toast('Recurso eliminado'); cargarRecursos(); }
+    else { toast('Error al eliminar'); }
+  } catch { toast('Error de conexión'); }
+}
+
+function copiarPass() {
+  const pass = document.getElementById('pass-generada').textContent;
+  navigator.clipboard.writeText(pass).then(() => toast('Contraseña copiada al portapapeles'));
+}
+
+async function cerrarSesion() {
+  const csrf = getCsrf();
+  await fetch(API + '/auth/logout/', {
+    method: 'POST', headers: { 'X-CSRFToken': csrf }, credentials: 'include'
+  });
+  window.location.href = '/login/';
+}
+
+// ── UI ────────────────────────────────────────────────────
+function mostrarSeccion(nombre) {
+  document.getElementById('seccion-organizaciones').style.display = nombre === 'organizaciones' ? '' : 'none';
+  document.getElementById('seccion-recursos').style.display       = nombre === 'recursos' ? '' : 'none';
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('activo'));
+  event.currentTarget.classList.add('activo');
+}
+
+function cerrarModal()     { document.getElementById('modal-fondo').classList.remove('abierto'); }
+function cerrarModalPass() { document.getElementById('modal-pass-fondo').classList.remove('abierto'); }
+function clicFondo(e)      { if (e.target === document.getElementById('modal-fondo')) cerrarModal(); }
+function clicFondoPass(e)  { if (e.target === document.getElementById('modal-pass-fondo')) cerrarModalPass(); }
+
+function etiquetaEstado(e) {
+  return { pendiente:'Pendiente', aprobada:'Aprobada', rechazada:'Rechazada' }[e] || e;
+}
+function formatearFecha(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' });
+}
+function getCsrf() {
+  return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2800);
+}
+</script>
+</body>
+</html>

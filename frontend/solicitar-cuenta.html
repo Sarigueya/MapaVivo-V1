@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitar cuenta · MapaVivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/estilos.css">
+<style>
+body { overflow: auto; background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+
+.auth-page {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-xl);
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--sombra-lg);
+  overflow: hidden;
+}
+
+.auth-card-header {
+  background: var(--verde-bg);
+  border-bottom: 1px solid var(--verde-borde);
+  padding: 28px 32px 24px;
+}
+
+.auth-card-header h1 {
+  font-family: var(--fuente);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 6px;
+}
+
+.auth-card-header p {
+  font-size: 14px;
+  color: var(--texto2);
+  line-height: 1.6;
+}
+
+.pasos {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.paso {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--texto3);
+  text-align: center;
+}
+
+.paso-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--borde);
+  color: var(--texto2);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paso.activo .paso-num { background: var(--verde); color: #fff; }
+.paso.activo { color: var(--verde); }
+
+.auth-card-body {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.seccion-titulo {
+  font-family: var(--fuente);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto);
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: 8px;
+  margin-bottom: 2px;
+}
+
+.campo-etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto2);
+  display: block;
+  margin-bottom: 7px;
+}
+
+.campo-pista {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--texto3);
+  margin-left: 4px;
+}
+
+input, select, textarea {
+  width: 100%;
+  font-family: var(--fuente);
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--bg);
+  border: 1.5px solid var(--borde);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--verde);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(45,122,79,.1);
+}
+input::placeholder, textarea::placeholder { color: var(--texto3); }
+textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239e8a73' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.campo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.campo-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.alerta {
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  line-height: 1.6;
+  display: none;
+}
+.alerta.error   { background: var(--rojo-bg);   color: var(--rojo);   border: 1px solid #f0b8b8; }
+.alerta.exito   { background: var(--verde-bg);  color: var(--verde);  border: 1px solid var(--verde-borde); }
+.alerta.visible { display: block; }
+
+.btn-principal {
+  width: 100%;
+  padding: 13px;
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--fuente);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  box-shadow: 0 2px 8px rgba(45,122,79,.25);
+}
+.btn-principal:hover:not(:disabled) {
+  background: var(--verde-claro);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(45,122,79,.3);
+}
+.btn-principal:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.nota-form {
+  font-size: 12px;
+  color: var(--texto3);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.auth-card-footer {
+  padding: 0 32px 28px;
+  text-align: center;
+}
+.auth-link-texto { font-size: 13px; color: var(--texto3); }
+.auth-link-texto a { color: var(--verde); font-weight: 600; text-decoration: none; }
+.auth-link-texto a:hover { text-decoration: underline; }
+
+/* Header mínimo */
+.mini-header {
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  flex-shrink: 0;
+  box-shadow: var(--sombra-sm);
+}
+.mini-header a.logo-link {
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+}
+.mini-header .logo-icono {
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  background: var(--verde-bg); border: 1.5px solid var(--verde-borde);
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-header .logo-circulo {
+  width: 11px; height: 11px; border-radius: 50%; background: var(--verde);
+  animation: latido 2.5s ease-in-out infinite;
+}
+.mini-header .logo-nombre {
+  font-family: var(--fuente); font-size: 18px; font-weight: 700; color: var(--texto);
+}
+.mini-header .logo-nombre em { font-style: normal; color: var(--verde); }
+.volver-mapa {
+  margin-left: auto; font-size: 13px; color: var(--verde);
+  font-weight: 500; text-decoration: none;
+}
+.volver-mapa:hover { text-decoration: underline; }
+
+/* Panel de éxito */
+#panel-exito {
+  display: none;
+  padding: 40px 32px;
+  text-align: center;
+}
+#panel-exito.visible { display: block; }
+.exito-icono {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--verde-bg); border: 2px solid var(--verde-borde);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 28px;
+}
+#panel-exito h2 {
+  font-family: var(--fuente); font-size: 22px; font-weight: 700;
+  color: var(--texto); margin-bottom: 10px;
+}
+#panel-exito p {
+  font-size: 14px; color: var(--texto2); line-height: 1.7; margin-bottom: 24px;
+}
+.btn-secundario {
+  display: inline-block; padding: 10px 24px;
+  background: transparent; color: var(--verde);
+  border: 1.5px solid var(--verde-borde);
+  border-radius: var(--r-md); font-family: var(--fuente);
+  font-size: 14px; font-weight: 600; text-decoration: none;
+  transition: all .15s;
+}
+.btn-secundario:hover { background: var(--verde-bg); }
+</style>
+</head>
+<body>
+
+<header class="mini-header">
+  <a href="/" class="logo-link">
+    <div class="logo-icono"><div class="logo-circulo"></div></div>
+    <span class="logo-nombre">Mapa<em>Vivo</em></span>
+  </a>
+  <a href="/" class="volver-mapa">← Volver al mapa</a>
+</header>
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-card-header">
+      <h1>Registrar tu organización</h1>
+      <p>Completa el formulario para solicitar acceso. Un administrador revisará tu solicitud y te contactará.</p>
+      <div class="pasos">
+        <div class="paso activo">
+          <div class="paso-num">1</div>
+          <span>Completar formulario</span>
+        </div>
+        <div class="paso">
+          <div class="paso-num">2</div>
+          <span>Revisión del admin</span>
+        </div>
+        <div class="paso">
+          <div class="paso-num">3</div>
+          <span>Cuenta aprobada</span>
+        </div>
+        <div class="paso">
+          <div class="paso-num">4</div>
+          <span>Publicar recursos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <div id="formulario">
+      <div class="auth-card-body">
+
+        <div id="alerta" class="alerta"></div>
+
+        <!-- Datos de la organización -->
+        <div class="seccion-titulo">Datos de la organización</div>
+
+        <div>
+          <label class="campo-etiqueta" for="nombre_org">Nombre de la organización</label>
+          <input id="nombre_org" type="text" placeholder="Ej: Comedor Corazón de Barrio">
+        </div>
+
+        <div>
+          <label class="campo-etiqueta" for="descripcion">
+            ¿Qué hacen?
+            <span class="campo-pista">Describe brevemente el trabajo que realizan</span>
+          </label>
+          <textarea id="descripcion" placeholder="Ej: Somos un comedor comunitario que brinda almuerzo gratuito a familias vulnerables del barrio Las Palmas desde 2018. Atendemos a más de 80 personas por día."></textarea>
+        </div>
+
+        <div>
+          <label class="campo-etiqueta" for="direccion">Dirección física</label>
+          <input id="direccion" type="text" placeholder="Calle, número y barrio">
+        </div>
+
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta" for="telefono">
+              Teléfono
+              <span class="campo-pista">opcional</span>
+            </label>
+            <input id="telefono" type="tel" placeholder="+57 300 000 0000">
+          </div>
+          <div>
+            <label class="campo-etiqueta" for="sitio_web">
+              Sitio web o red social
+              <span class="campo-pista">opcional</span>
+            </label>
+            <input id="sitio_web" type="url" placeholder="https://...">
+          </div>
+        </div>
+
+        <!-- Datos de acceso -->
+        <div class="seccion-titulo">Datos de acceso</div>
+
+        <div>
+          <label class="campo-etiqueta" for="username">Nombre de usuario</label>
+          <input id="username" type="text" placeholder="Ej: comedor_barrio (sin espacios)" autocomplete="username">
+        </div>
+
+        <div>
+          <label class="campo-etiqueta" for="email">Correo electrónico</label>
+          <input id="email" type="email" placeholder="contacto@tuorganizacion.org" autocomplete="email">
+        </div>
+
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta" for="password">Contraseña</label>
+            <input id="password" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+          </div>
+          <div>
+            <label class="campo-etiqueta" for="password2">Confirmar contraseña</label>
+            <input id="password2" type="password" placeholder="Repetir contraseña" autocomplete="new-password">
+          </div>
+        </div>
+
+        <button class="btn-principal" id="btn-enviar" onclick="enviarSolicitud()">
+          Enviar solicitud
+        </button>
+
+        <p class="nota-form">
+          Al enviar, tu solicitud queda en revisión. El administrador te avisará<br>
+          por correo cuando tu cuenta esté aprobada.
+        </p>
+
+      </div>
+    </div>
+
+    <!-- Panel de éxito (se muestra al enviar) -->
+    <div id="panel-exito">
+      <div class="exito-icono">✓</div>
+      <h2>¡Solicitud enviada!</h2>
+      <p>
+        Recibimos tu solicitud para <strong id="nombre-org-confirmado"></strong>.<br>
+        El equipo administrador la revisará y te enviará un correo a <strong id="email-confirmado"></strong>
+        cuando tu cuenta esté habilitada.<br><br>
+        Mientras tanto podés seguir usando el mapa normalmente.
+      </p>
+      <a href="/" class="btn-secundario">Volver al mapa</a>
+    </div>
+
+    <div class="auth-card-footer" id="footer-login">
+      <p class="auth-link-texto">
+        ¿Ya tienes cuenta aprobada?
+        <a href="/login/">Iniciar sesión</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function enviarSolicitud() {
+  const campos = {
+    nombre_org:  document.getElementById('nombre_org').value.trim(),
+    descripcion: document.getElementById('descripcion').value.trim(),
+    direccion:   document.getElementById('direccion').value.trim(),
+    telefono:    document.getElementById('telefono').value.trim(),
+    sitio_web:   document.getElementById('sitio_web').value.trim(),
+    username:    document.getElementById('username').value.trim(),
+    email:       document.getElementById('email').value.trim(),
+    password:    document.getElementById('password').value,
+    password2:   document.getElementById('password2').value,
+  };
+
+  // Validaciones básicas
+  if (!campos.nombre_org) return mostrarAlerta('El nombre de la organización es obligatorio.', 'error');
+  if (campos.descripcion.length < 20) return mostrarAlerta('La descripción debe tener al menos 20 caracteres.', 'error');
+  if (!campos.direccion)  return mostrarAlerta('La dirección es obligatoria.', 'error');
+  if (!campos.username)   return mostrarAlerta('El nombre de usuario es obligatorio.', 'error');
+  if (!/^[a-zA-Z0-9_]+$/.test(campos.username)) return mostrarAlerta('El usuario solo puede tener letras, números y guión bajo.', 'error');
+  if (!campos.email)      return mostrarAlerta('El correo electrónico es obligatorio.', 'error');
+  if (campos.password.length < 8) return mostrarAlerta('La contraseña debe tener al menos 8 caracteres.', 'error');
+  if (campos.password !== campos.password2) return mostrarAlerta('Las contraseñas no coinciden.', 'error');
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled    = true;
+  btn.textContent = 'Enviando solicitud...';
+  document.getElementById('alerta').classList.remove('visible');
+
+  try {
+    await fetch('/api/health/', { credentials: 'include' });
+    const csrfToken = getCsrf();
+
+    const payload = {
+      nombre_org:  campos.nombre_org,
+      descripcion: campos.descripcion,
+      direccion:   campos.direccion,
+      telefono:    campos.telefono,
+      sitio_web:   campos.sitio_web,
+      username:    campos.username,
+      email:       campos.email,
+      password:    campos.password,
+    };
+
+    const res = await fetch('/api/auth/registro/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // Mostrar panel de éxito
+      document.getElementById('formulario').style.display        = 'none';
+      document.getElementById('footer-login').style.display      = 'none';
+      document.getElementById('nombre-org-confirmado').textContent = campos.nombre_org;
+      document.getElementById('email-confirmado').textContent      = campos.email;
+      document.getElementById('panel-exito').classList.add('visible');
+    } else {
+      // Mostrar errores del servidor
+      let mensajeError = '';
+      if (typeof data === 'object') {
+        mensajeError = Object.entries(data)
+          .map(([campo, errores]) => {
+            const nombre = { nombre_org:'Organización', descripcion:'Descripción',
+              direccion:'Dirección', username:'Usuario', email:'Correo', password:'Contraseña' }[campo] || campo;
+            return `${nombre}: ${Array.isArray(errores) ? errores.join(', ') : errores}`;
+          }).join('\n');
+      } else {
+        mensajeError = 'Hubo un error. Revisá los datos e intentá de nuevo.';
+      }
+      mostrarAlerta(mensajeError, 'error');
+    }
+  } catch {
+    mostrarAlerta('No se pudo conectar con el servidor.', 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Enviar solicitud';
+  }
+}
+
+function mostrarAlerta(texto, tipo) {
+  const el = document.getElementById('alerta');
+  el.textContent = texto;
+  el.className   = `alerta ${tipo} visible`;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function getCsrf() {
+  return document.cookie.split('; ')
+    .find(r => r.startsWith('csrftoken='))
+    ?.split('=')[1] || '';
+}
+</script>
+</body>
+</html>

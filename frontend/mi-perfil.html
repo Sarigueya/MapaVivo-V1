@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi perfil · MapaVivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/estilos.css">
+<style>
+body { overflow: auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+
+.perfil-layout {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 36px 20px;
+}
+
+.perfil-contenedor {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-titulo {
+  font-family: var(--fuente);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--texto);
+  margin-bottom: 2px;
+}
+.page-sub { font-size: 14px; color: var(--texto2); margin-bottom: 4px; }
+
+.tarjeta {
+  background: var(--surface);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--sombra-sm);
+}
+
+.tarjeta-header {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tarjeta-titulo {
+  font-family: var(--fuente);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--texto);
+}
+.tarjeta-subtitulo { font-size: 12px; color: var(--texto3); margin-top: 2px; }
+
+.tarjeta-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo-etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto2);
+  display: block;
+  margin-bottom: 7px;
+}
+.campo-pista { font-size: 11px; font-weight: 400; color: var(--texto3); margin-left: 4px; }
+
+input, textarea {
+  width: 100%;
+  font-family: var(--fuente);
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--bg);
+  border: 1.5px solid var(--borde);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, textarea:focus {
+  border-color: var(--verde);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(45,122,79,.1);
+}
+input::placeholder, textarea::placeholder { color: var(--texto3); }
+input:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  background: var(--bg);
+}
+textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.campo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.tarjeta-pie {
+  padding: 0 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-principal {
+  padding: 10px 22px;
+  background: var(--verde); color: #fff;
+  border: none; border-radius: var(--r-md);
+  font-family: var(--fuente); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 2px 8px rgba(45,122,79,.2);
+}
+.btn-principal:hover:not(:disabled) {
+  background: var(--verde-claro);
+  transform: translateY(-1px);
+}
+.btn-principal:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-neutro {
+  padding: 10px 22px;
+  background: transparent; color: var(--texto2);
+  border: 1px solid var(--borde); border-radius: var(--r-md);
+  font-family: var(--fuente); font-size: 14px; cursor: pointer;
+}
+
+.alerta {
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px; line-height: 1.5;
+  display: none;
+}
+.alerta.error   { background: var(--rojo-bg);  color: var(--rojo);  border: 1px solid #f0b8b8; }
+.alerta.exito   { background: var(--verde-bg); color: var(--verde); border: 1px solid var(--verde-borde); }
+.alerta.visible { display: block; }
+
+.chip-estado {
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 99px;
+}
+.chip-pendiente { background: var(--naranja-bg); color: var(--naranja); border: 1px solid #f0c49a; }
+.chip-aprobada  { background: var(--verde-bg);   color: var(--verde);   border: 1px solid var(--verde-borde); }
+.chip-rechazada { background: var(--rojo-bg);     color: var(--rojo);    border: 1px solid #f0b8b8; }
+
+.sep { height: 1px; background: var(--borde); }
+
+/* Header */
+.mini-header {
+  height: 56px; background: var(--surface);
+  border-bottom: 1px solid var(--borde);
+  display: flex; align-items: center; padding: 0 24px;
+  flex-shrink: 0; box-shadow: var(--sombra-sm);
+}
+.mini-header a.logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.mini-header .logo-icono {
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  background: var(--verde-bg); border: 1.5px solid var(--verde-borde);
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-header .logo-circulo { width: 11px; height: 11px; border-radius: 50%; background: var(--verde); animation: latido 2.5s ease-in-out infinite; }
+.mini-header .logo-nombre  { font-family: var(--fuente); font-size: 18px; font-weight: 700; color: var(--texto); }
+.mini-header .logo-nombre em { font-style: normal; color: var(--verde); }
+.header-acciones { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.volver { font-size: 13px; color: var(--verde); text-decoration: none; font-weight: 500; }
+.volver:hover { text-decoration: underline; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--texto); color: #fff;
+  font-size: 13px; font-weight: 500;
+  padding: 10px 22px; border-radius: 99px;
+  z-index: 2000; transition: transform .3s cubic-bezier(.34,1.5,.64,1);
+  pointer-events: none; white-space: nowrap; box-shadow: var(--sombra-lg);
+}
+#toast.visible { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="mini-header">
+  <a href="/" class="logo-link">
+    <div class="logo-icono"><div class="logo-circulo"></div></div>
+    <span class="logo-nombre">Mapa<em>Vivo</em></span>
+  </a>
+  <div class="header-acciones">
+    <a href="/" class="volver">← Volver al mapa</a>
+  </div>
+</header>
+
+<div class="perfil-layout">
+  <div class="perfil-contenedor">
+
+    <div>
+      <div class="page-titulo">Mi perfil</div>
+      <div class="page-sub" id="subtitulo-perfil">Cargando...</div>
+    </div>
+
+    <!-- Tarjeta: Datos de la organización -->
+    <div class="tarjeta" id="tarjeta-org" style="display:none">
+      <div class="tarjeta-header">
+        <div>
+          <div class="tarjeta-titulo">Datos de la organización</div>
+          <div class="tarjeta-subtitulo">Esta información aparece en el mapa junto a tus recursos</div>
+        </div>
+        <span id="chip-estado" class="chip-estado"></span>
+      </div>
+      <div class="tarjeta-body">
+        <div id="alerta-org" class="alerta"></div>
+        <div>
+          <label class="campo-etiqueta" for="nombre_org">Nombre de la organización</label>
+          <input id="nombre_org" type="text" placeholder="Nombre visible en el mapa">
+        </div>
+        <div>
+          <label class="campo-etiqueta" for="descripcion">
+            Descripción
+            <span class="campo-pista">¿Qué servicio ofrecen?</span>
+          </label>
+          <textarea id="descripcion" placeholder="Describí brevemente el trabajo que realizan"></textarea>
+        </div>
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta" for="direccion">Dirección</label>
+            <input id="direccion" type="text" placeholder="Dirección física">
+          </div>
+          <div>
+            <label class="campo-etiqueta" for="telefono">
+              Teléfono
+              <span class="campo-pista">opcional</span>
+            </label>
+            <input id="telefono" type="tel" placeholder="+57 300 000 0000">
+          </div>
+        </div>
+        <div>
+          <label class="campo-etiqueta" for="sitio_web">
+            Sitio web o red social
+            <span class="campo-pista">opcional</span>
+          </label>
+          <input id="sitio_web" type="url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="tarjeta-pie">
+        <button class="btn-verde" onclick="guardarOrg()">Guardar cambios</button>
+      </div>
+    </div>
+
+    <!-- Tarjeta: Datos de acceso -->
+    <div class="tarjeta">
+      <div class="tarjeta-header">
+        <div>
+          <div class="tarjeta-titulo">Datos de acceso</div>
+          <div class="tarjeta-subtitulo">Usuario y correo de tu cuenta</div>
+        </div>
+      </div>
+      <div class="tarjeta-body">
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta">Usuario</label>
+            <input id="username-display" type="text" disabled>
+          </div>
+          <div>
+            <label class="campo-etiqueta">Correo</label>
+            <input id="email-display" type="email" disabled>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--texto3)">Para cambiar tu usuario o correo contactá al administrador.</p>
+      </div>
+    </div>
+
+    <!-- Tarjeta: Cambiar contraseña -->
+    <div class="tarjeta">
+      <div class="tarjeta-header">
+        <div>
+          <div class="tarjeta-titulo">Cambiar contraseña</div>
+          <div class="tarjeta-subtitulo">Usá una contraseña segura de al menos 8 caracteres</div>
+        </div>
+      </div>
+      <div class="tarjeta-body">
+        <div id="alerta-pass" class="alerta"></div>
+        <div>
+          <label class="campo-etiqueta" for="pass-actual">Contraseña actual</label>
+          <input id="pass-actual" type="password" placeholder="Tu contraseña actual" autocomplete="current-password">
+        </div>
+        <div class="campo-grid">
+          <div>
+            <label class="campo-etiqueta" for="pass-nueva">Nueva contraseña</label>
+            <input id="pass-nueva" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+          </div>
+          <div>
+            <label class="campo-etiqueta" for="pass-confirmar">Confirmar contraseña</label>
+            <input id="pass-confirmar" type="password" placeholder="Repetir contraseña" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+      <div class="tarjeta-pie">
+        <button class="btn-verde" onclick="cambiarPassword()">Cambiar contraseña</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let usuarioActual = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await cargarPerfil();
+});
+
+async function cargarPerfil() {
+  try {
+    const res = await fetch(API + '/auth/perfil/', { credentials: 'include' });
+    if (!res.ok) { window.location.href = '/login/'; return; }
+    usuarioActual = await res.json();
+
+    document.getElementById('username-display').value = usuarioActual.username;
+    document.getElementById('email-display').value    = usuarioActual.email;
+
+    if (usuarioActual.organizacion) {
+      const org = usuarioActual.organizacion;
+      document.getElementById('subtitulo-perfil').textContent =
+        'Organización: ' + org.nombre_org;
+
+      // Mostrar tarjeta org y llenar campos
+      document.getElementById('tarjeta-org').style.display = '';
+      document.getElementById('nombre_org').value   = org.nombre_org  || '';
+      document.getElementById('descripcion').value  = org.descripcion || '';
+      document.getElementById('direccion').value    = org.direccion   || '';
+      document.getElementById('telefono').value     = org.telefono    || '';
+      document.getElementById('sitio_web').value    = org.sitio_web   || '';
+
+      // Chip de estado
+      const chip = document.getElementById('chip-estado');
+      const estados = {
+        pendiente: ['Pendiente de aprobación', 'chip-pendiente'],
+        aprobada:  ['Verificada',              'chip-aprobada'],
+        rechazada: ['Rechazada',               'chip-rechazada'],
+      };
+      const [texto, clase] = estados[org.estado] || ['—', ''];
+      chip.textContent  = texto;
+      chip.className    = 'chip-estado ' + clase;
+    } else {
+      document.getElementById('subtitulo-perfil').textContent =
+        'Administrador del sistema';
+    }
+  } catch { window.location.href = '/login/'; }
+}
+
+async function guardarOrg() {
+  const csrf = getCsrf();
+  const datos = {
+    nombre_org:  document.getElementById('nombre_org').value.trim(),
+    descripcion: document.getElementById('descripcion').value.trim(),
+    direccion:   document.getElementById('direccion').value.trim(),
+    telefono:    document.getElementById('telefono').value.trim(),
+    sitio_web:   document.getElementById('sitio_web').value.trim(),
+  };
+
+  if (!datos.nombre_org) { mostrarAlerta('alerta-org', 'El nombre es obligatorio.', 'error'); return; }
+
+  try {
+    const res = await fetch(API + '/auth/perfil/organizacion/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      credentials: 'include',
+      body: JSON.stringify(datos),
+    });
+    if (res.ok) {
+      mostrarAlerta('alerta-org', 'Datos guardados correctamente.', 'exito');
+      toast('Cambios guardados');
+    } else {
+      const err = await res.json();
+      mostrarAlerta('alerta-org', JSON.stringify(err), 'error');
+    }
+  } catch { mostrarAlerta('alerta-org', 'Error de conexión.', 'error'); }
+}
+
+async function cambiarPassword() {
+  const actual    = document.getElementById('pass-actual').value;
+  const nueva     = document.getElementById('pass-nueva').value;
+  const confirmar = document.getElementById('pass-confirmar').value;
+
+  if (!actual)          { mostrarAlerta('alerta-pass', 'Ingresá tu contraseña actual.', 'error'); return; }
+  if (nueva.length < 8) { mostrarAlerta('alerta-pass', 'La nueva contraseña debe tener al menos 8 caracteres.', 'error'); return; }
+  if (nueva !== confirmar) { mostrarAlerta('alerta-pass', 'Las contraseñas no coinciden.', 'error'); return; }
+
+  const csrf = getCsrf();
+  try {
+    const res = await fetch(API + '/auth/cambiar-password/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      credentials: 'include',
+      body: JSON.stringify({ password_actual: actual, password_nueva: nueva }),
+    });
+    if (res.ok) {
+      mostrarAlerta('alerta-pass', 'Contraseña cambiada correctamente.', 'exito');
+      document.getElementById('pass-actual').value    = '';
+      document.getElementById('pass-nueva').value     = '';
+      document.getElementById('pass-confirmar').value = '';
+      toast('Contraseña actualizada');
+    } else {
+      const err = await res.json();
+      mostrarAlerta('alerta-pass', err.error || 'Error al cambiar la contraseña.', 'error');
+    }
+  } catch { mostrarAlerta('alerta-pass', 'Error de conexión.', 'error'); }
+}
+
+function mostrarAlerta(id, texto, tipo) {
+  const el = document.getElementById(id);
+  el.textContent = texto;
+  el.className = 'alerta ' + tipo + ' visible';
+}
+
+function getCsrf() {
+  return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2800);
+}
+</script>
+</body>
+</html>
